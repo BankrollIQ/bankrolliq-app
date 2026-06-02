@@ -342,7 +342,7 @@
 <p>Choose the tool that matches what you want to do next. BankrollIQ keeps the main products in one place so visitors can quickly move from education to live intelligence, portfolio building, or a one-time Quick IQ Report™.</p>
 </div>
 <div class="grid three">
-<a class="card cardLink" href="#quick-iq-report"><h3>Quick IQ Report™</h3><p>One-time automated intelligence report for users who want a fast scenario snapshot before subscribing.</p><p class="miniNote">Start here for the $10 report →</p></a>
+<a class="card cardLink featured" href="#quick-iq-report"><h3>Quick IQ Report™ <button class="helpBtn" type="button" data-help="quickIQ">?</button></h3><p>One-time automated intelligence report for users who want a fast scenario snapshot before subscribing.</p><p class="miniNote">Start here for the $10 report →</p></a>
 <a class="card cardLink" href="#markets"><h3>Real-Time Market Intelligence™</h3><p>Load current market data, review implied probability, and add selections to your Intelligence Portfolio™.</p><p class="miniNote">Open market data →</p></a>
 <a class="card cardLink" href="#prediction-iq"><h3>Prediction IQ™ Engine</h3><p>Compare your confidence level against market probability and convert the gap into a simple intelligence score.</p><p class="miniNote">Learn the score →</p></a>
 <a class="card cardLink" href="#free-report"><h3>Free Prediction IQ™ Report</h3><p>Get the starter guide explaining market probability, confidence scoring, and risk-adjusted scenario intelligence.</p><p class="miniNote">Get the free report →</p></a>
@@ -356,14 +356,15 @@
 <p>A one-time automated intelligence report for users who want a fast scenario snapshot without starting a subscription. Users choose their market category, portfolio amount, number of scenarios, and risk profile. BankrollIQ provides up to 3 educational market intelligence scenarios with Prediction IQ™ Score, Market Insight™, and Allocation Intelligence™ guidance.</p>
 </div>
 <div class="grid three">
-<div class="card"><h3>Fast Intelligence</h3><p>Generate up to 3 scenario ideas based on selected category, risk profile, available market data, and current Prediction IQ™ inputs.</p></div>
-<div class="card"><h3>Allocation Guidance</h3><p>Each report includes suggested allocation ranges, portfolio reserve guidance, and risk-adjusted scenario notes.</p></div>
-<div class="card"><h3>$10 One-Time</h3><p>No subscription required. Designed as a low-friction way for new users to experience BankrollIQ before upgrading.</p></div>
+<div class="card"><h3>1. Choose Criteria</h3><p>Select market category, portfolio amount, number of scenarios, and risk profile so the report knows what type of intelligence snapshot to build.</p></div>
+<div class="card"><h3>2. Generate Scenarios</h3><p>After purchase, click the report generator button and BankrollIQ produces up to 3 automated intelligence scenarios from current market data.</p></div>
+<div class="card"><h3>3. Review Allocation</h3><p>Each report includes Prediction IQ™ Score, Market Insight™, Allocation Intelligence™, reserve guidance, and scenario notes.</p></div>
 </div>
 <div class="card" style="margin-top:24px">
 <h3>Quick IQ Report™ — $10</h3>
-<p class="muted">Educational analytics only. No guaranteed outcomes. No professional advice. The report is generated from user inputs, market data, and probability assumptions available at the time of analysis.</p>
+<p class="muted">Quick IQ Report™ is a one-time report for users who want a fast, quick-pick style intelligence snapshot without building a full portfolio manually. It is not a guaranteed outcome, not professional advice, and not a promise of results.</p>
 <a class="btn primary full" href="https://buy.stripe.com/4gMfZiaLQ3gs75UbKVfIs03" onclick="trackCheckout('quick_iq_report')" rel="noopener" target="_blank">Get Quick IQ Report™ — $10</a>
+<button class="btn secondary full" type="button" onclick="alert('After the $10 checkout is completed, the paid report flow will allow the customer to generate a Quick IQ Report™ from their selected market category, portfolio amount, scenario count, and risk profile.')">How The Generator Works</button>
 
 </div>
 </section>
@@ -860,7 +861,7 @@ const helpContent = {
   portfolioBuilder:{title:"Intelligence Portfolio Builder™",body:"<p>Build a daily Intelligence Portfolio by adding imported market lines or custom market lines, then analyze suggested reserve, allocation pools, goal progress, and Portfolio IQ™.</p><ul><li>Daily Capital = amount you want to analyze today.</li><li>Market Line examples: -115, +125.</li><li>Add at least one line, then click Analyze Intelligence Portfolio™.</li></ul>"},
   iqAnalyzer:{title:"Prediction IQ™ Analyzer",body:"<p>Use this for one market line at a time. Enter the selected market line, your confidence percentage, portfolio size, and risk profile to calculate Prediction IQ™.</p><ul><li>American line examples: -110 or +150.</li><li>Your confidence should be a percentage from 1 to 99.</li><li>Outputs include score, market probability, Market Insight™, and Allocation Intelligence™.</li></ul>"},
   whyBankrollIQ:{title:"Why BankrollIQ™",body:"<p>This product hub helps visitors choose the right BankrollIQ tool quickly.</p><ul><li>Quick IQ Report™ is the one-time paid report.</li><li>Real-Time Market Intelligence™ loads current market data.</li><li>Prediction IQ™ explains confidence versus market probability.</li><li>Intelligence Portfolio™ and Combination Analysis™ model allocation, reserve, and potential outcomes.</li></ul>"},
-  quickIQ:{title:"Quick IQ Report™",body:"<p>Quick IQ Report™ is a one-time $10 automated intelligence report for users who want a fast scenario snapshot without starting a subscription.</p><ul><li>Designed as a low-friction first purchase.</li><li>Includes up to 3 educational market intelligence scenarios.</li><li>Educational analytics only. No guaranteed outcomes.</li></ul>"},
+  quickIQ:{title:"Quick IQ Report™",body:"<p>Quick IQ Report™ is a one-time $10 automated intelligence report for users who want a fast, quick-pick style scenario snapshot without starting a subscription.</p><ul><li>The user chooses a market category, portfolio amount, number of scenarios, and risk profile.</li><li>BankrollIQ uses current market data, Prediction IQ™ logic, and allocation rules to generate up to 3 educational intelligence scenarios.</li><li>After checkout, the report flow should let the customer click Generate Quick IQ Report™ to create their report.</li><li>This is educational analytics only. It is not a guaranteed outcome, not professional advice, and not a promise of results.</li></ul>"},
   pricing:{title:"Founding Member Pricing",body:"<p>Founder pricing gives early users launch pricing protection for 6 months while their subscription remains active.</p><ul><li>Premium: $9.99/mo.</li><li>Elite: $24.99/mo.</li><li>Pro: $49.99/mo.</li><li>All plans currently include a 7-day free trial.</li></ul>"},
   partner:{title:"BankrollIQ Partner Program",body:"<p>Creators, analysts, educators, and content partners can apply for manual approval to promote BankrollIQ.</p><ul><li>Creator codes and referral links may be provided.</li><li>Partners are reviewed manually.</li><li>Focus should stay on educational probability and risk analysis.</li></ul>"}
 };
@@ -873,7 +874,7 @@ function openHelp(key){
 }
 function closeHelp(){ document.getElementById('helpModalOverlay').style.display = 'none'; }
 document.addEventListener('click', function(e){
-  if(e.target && e.target.classList.contains('helpBtn')){ openHelp(e.target.getAttribute('data-help')); }
+  if(e.target && e.target.classList.contains('helpBtn')){ e.preventDefault(); e.stopPropagation(); openHelp(e.target.getAttribute('data-help')); }
   if(e.target && e.target.id === 'helpClose'){ closeHelp(); }
   if(e.target && e.target.id === 'helpModalOverlay'){ closeHelp(); }
 });
