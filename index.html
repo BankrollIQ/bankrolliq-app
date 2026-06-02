@@ -54,6 +54,16 @@
 .scenarioTable th,.scenarioTable td{border-bottom:1px solid var(--line);padding:10px;text-align:left}
 .scenarioTable th{color:var(--text)}
 .warningBox{border:1px solid rgba(94,234,212,.45);background:rgba(94,234,212,.06);border-radius:16px;padding:14px;margin-top:16px;color:var(--muted)}
+.comboHighlight{margin-top:18px;border-width:2px;box-shadow:0 0 24px rgba(94,234,212,.12);font-size:16px;line-height:1.55}
+.comboHighlight h4{margin:0 0 8px;font-size:20px}
+.comboPositive{border-color:rgba(34,197,94,.85)!important;background:rgba(34,197,94,.10)!important}
+.comboNegative{border-color:rgba(239,68,68,.85)!important;background:rgba(239,68,68,.10)!important}
+.comboNeutral{border-color:rgba(59,130,246,.85)!important;background:rgba(59,130,246,.10)!important}
+.comboTag{display:inline-flex;align-items:center;border-radius:999px;padding:5px 10px;font-size:12px;font-weight:900;margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em}
+.comboPositive .comboTag{background:rgba(34,197,94,.18);color:#86efac}
+.comboNegative .comboTag{background:rgba(239,68,68,.18);color:#fca5a5}
+.comboNeutral .comboTag{background:rgba(59,130,246,.18);color:#93c5fd}
+
 @media(max-width:900px){.sportsForm,.sportsResults{grid-template-columns:1fr}.scenarioTable{font-size:13px}}
 .grid.two{grid-template-columns:repeat(2,1fr)}
 .iqPanel{border:1px solid rgba(94,234,212,.55);background:linear-gradient(180deg,rgba(94,234,212,.08),rgba(255,255,255,.025))}
@@ -111,42 +121,6 @@
 </div>
 </section>
 <main>
-<section class="section premium" id="free-report">
-<div class="sectionHeader">
-<h2>Free Prediction IQ™ Report <button class="helpBtn" type="button" data-help="freeReport">?</button></h2>
-<p>Get the launch report that explains how market probability, confidence scoring, and risk-adjusted scenario analysis work inside BankrollIQ.</p>
-<ul class="featureList compactList">
-<li>Why high-confidence predictions can still carry risk</li>
-<li>How variance affects portfolio performance</li>
-<li>Common prediction probability mistakes</li>
-<li>Risk-adjusted scenario intelligence</li>
-</ul>
-</div>
-<form class="card leadForm" data-netlify="true" method="POST" name="prediction-iq-report" netlify-honeypot="bot-field">
-<input name="form-name" type="hidden" value="prediction-iq-report"/>
-<p style="display:none"><label>Do not fill this out <input name="bot-field"/></label></p>
-<label>Name
-          <input name="name" placeholder="Your name" type="text"/>
-</label>
-<label>Email
-          <input name="email" placeholder="you@email.com" required="" type="email"/>
-</label>
-<button class="btn primary" type="submit">Get Free Report</button>
-</form>
-<p class="miniNote">Educational content only. No guaranteed outcomes. You can unsubscribe at any time.</p>
-</section>
-<section class="section" id="prediction-iq">
-<div class="sectionHeader">
-<h2>Prediction IQ™ Engine <button class="helpBtn" type="button" data-help="predictionIQ">?</button></h2>
-<p>Prediction IQ™ compares your confidence level against live market expectations and converts the gap into a simple intelligence score, confidence rating, and risk allocation guide.</p>
-</div>
-<div class="grid three">
-<div class="card"><h3>Market Probability</h3><p>See the implied market expectation behind each live prediction market in plain English.</p></div>
-<div class="card"><h3>Market Insight™</h3><p>Compare your estimated probability against the market to identify positive, neutral, or negative probability gaps.</p></div>
-<div class="card"><h3>Allocation Intelligence™</h3><p>Translate confidence and insight into conservative, balanced, or aggressive allocation guidance.</p></div>
-</div>
-</section>
-
 <section class="section premium" id="markets">
 <div class="sectionHeader">
 <h2>Real-Time Market Intelligence™ <button class="helpBtn" type="button" data-help="marketIntel">?</button></h2>
@@ -352,6 +326,44 @@
 </div>
 <div class="warningBox" id="portfolioGuide">Add two or more market lines to generate individual allocation, reserve guidance, and optional combo analysis.</div>
 </div>
+
+<section class="section" id="prediction-iq">
+<div class="sectionHeader">
+<h2>Prediction IQ™ Engine <button class="helpBtn" type="button" data-help="predictionIQ">?</button></h2>
+<p>Prediction IQ™ compares your confidence level against live market expectations and converts the gap into a simple intelligence score, confidence rating, and risk allocation guide.</p>
+</div>
+<div class="grid three">
+<div class="card"><h3>Market Probability</h3><p>See the implied market expectation behind each live prediction market in plain English.</p></div>
+<div class="card"><h3>Market Insight™</h3><p>Compare your estimated probability against the market to identify positive, neutral, or negative probability gaps.</p></div>
+<div class="card"><h3>Allocation Intelligence™</h3><p>Translate confidence and insight into conservative, balanced, or aggressive allocation guidance.</p></div>
+</div>
+</section>
+
+
+<section class="section premium" id="free-report">
+<div class="sectionHeader">
+<h2>Free Prediction IQ™ Report <button class="helpBtn" type="button" data-help="freeReport">?</button></h2>
+<p>Get the launch report that explains how market probability, confidence scoring, and risk-adjusted scenario analysis work inside BankrollIQ.</p>
+<ul class="featureList compactList">
+<li>Why high-confidence predictions can still carry risk</li>
+<li>How variance affects portfolio performance</li>
+<li>Common prediction probability mistakes</li>
+<li>Risk-adjusted scenario intelligence</li>
+</ul>
+</div>
+<form class="card leadForm" data-netlify="true" method="POST" name="prediction-iq-report" netlify-honeypot="bot-field">
+<input name="form-name" type="hidden" value="prediction-iq-report"/>
+<p style="display:none"><label>Do not fill this out <input name="bot-field"/></label></p>
+<label>Name
+          <input name="name" placeholder="Your name" type="text"/>
+</label>
+<label>Email
+          <input name="email" placeholder="you@email.com" required="" type="email"/>
+</label>
+<button class="btn primary" type="submit">Get Free Report</button>
+</form>
+<p class="miniNote">Educational content only. No guaranteed outcomes. You can unsubscribe at any time.</p>
+</section>
 
 <section class="section" id="why-bankrolliq">
 <div class="sectionHeader">
@@ -727,6 +739,7 @@ function analyzePortfolio(){
   const risk = document.getElementById("portfolioRiskProfile").value;
   const frame = document.getElementById("portfolioGoalFrame").value;
   if(intelligencePortfolio.length === 0){
+    guide.className = "warningBox";
     guide.innerHTML = "Add at least one market line before analyzing the Intelligence Portfolio™.";
     return;
   }
@@ -751,6 +764,11 @@ function analyzePortfolio(){
   const comboConfidenceProbability = scored.reduce((product, item)=> product * item.confidence, 1);
   const comboPotentialPayout = combo * comboDecimal;
   const comboPotentialNet = comboPotentialPayout - combo;
+  const comboExpectedValue = (comboPotentialPayout * comboConfidenceProbability) - combo;
+  let comboToneClass = "comboNeutral";
+  let comboToneLabel = "Neutral Scenario";
+  if(comboExpectedValue > 0){ comboToneClass = "comboPositive"; comboToneLabel = "Positive Scenario"; }
+  if(comboExpectedValue < 0){ comboToneClass = "comboNegative"; comboToneLabel = "Negative Scenario"; }
   const individualPool = Math.max(0, capital - reserve - combo);
   const weightBase = positive.length ? positive : scored;
   const totalWeight = weightBase.reduce((s,x)=>s+Math.max(1,x.score),0);
@@ -772,7 +790,9 @@ function analyzePortfolio(){
     <div class="metric"><span>Potential Combo Net</span><strong>${sportsMoney(comboPotentialNet)}</strong></div>
     <div class="metric"><span>Estimated Combo Probability</span><strong>${formatPercent(comboConfidenceProbability)}</strong></div>
   `;
+  guide.className = `warningBox comboHighlight ${comboToneClass}`;
   guide.innerHTML = `
+    <span class="comboTag">${comboToneLabel}</span>
     <strong>Allocation Intelligence™ Plan (${risk.charAt(0).toUpperCase()+risk.slice(1)}):</strong>
     <table class="scenarioTable">
       <tr><th>Selection</th><th>Source</th><th>Line</th><th>Market Prob.</th><th>Confidence</th><th>Market Insight™</th><th>Prediction IQ™</th><th>Suggested Allocation</th></tr>
@@ -780,7 +800,7 @@ function analyzePortfolio(){
       <tr><td colspan="7"><strong>Reserve / Uncommitted Protection</strong></td><td><strong>${sportsMoney(reserve)}</strong></td></tr>
       <tr><td colspan="7"><strong>Optional Combo Allocation</strong></td><td><strong>${sportsMoney(combo)}</strong></td></tr>
     </table>
-    <p class="miniNote"><strong>Combination Analysis™:</strong> If all ${scored.length} scenarios occur, the estimated combo payout on ${sportsMoney(combo)} is ${sportsMoney(comboPotentialPayout)} with an estimated net result of ${sportsMoney(comboPotentialNet)}. Estimated combo probability based on your confidence inputs is ${formatPercent(comboConfidenceProbability)}; market-implied combo probability is ${formatPercent(comboMarketProbability)}.</p>
+    <p class="miniNote"><strong>Combination Analysis™:</strong> If all ${scored.length} scenarios occur, the estimated combo payout on ${sportsMoney(combo)} is ${sportsMoney(comboPotentialPayout)} with an estimated net result of ${sportsMoney(comboPotentialNet)}. Estimated combo probability based on your confidence inputs is ${formatPercent(comboConfidenceProbability)}; market-implied combo probability is ${formatPercent(comboMarketProbability)}. Estimated combo expected value is ${sportsMoney(comboExpectedValue)}.</p>
     <p class="miniNote">Estimated portfolio balance after full daily capital is committed and reserve remains uncommitted: ${sportsMoney(projectedAfterReserve)}. Educational intelligence only. BankrollIQ does not provide financial, wagering, legal, tax, or guaranteed-outcome advice.</p>
   `;
   if(typeof gtag === "function"){
@@ -802,7 +822,7 @@ if(addCustomBtn){
 const analyzePortfolioBtn = document.getElementById("analyzePortfolioBtn");
 if(analyzePortfolioBtn){ analyzePortfolioBtn.addEventListener("click", analyzePortfolio); }
 const clearPortfolioBtn = document.getElementById("clearPortfolioBtn");
-if(clearPortfolioBtn){ clearPortfolioBtn.addEventListener("click", function(){ intelligencePortfolio.length = 0; renderPortfolio(); document.getElementById("portfolioGuide").innerHTML = "Add two or more market lines to generate individual allocation, reserve guidance, and optional combo analysis."; }); }
+if(clearPortfolioBtn){ clearPortfolioBtn.addEventListener("click", function(){ intelligencePortfolio.length = 0; renderPortfolio(); const pg = document.getElementById("portfolioGuide"); pg.className = "warningBox"; pg.innerHTML = "Add two or more market lines to generate individual allocation, reserve guidance, and optional combo analysis."; }); }
 document.addEventListener("click", function(e){
   if(e.target && e.target.classList.contains("portfolioAddBtn")){
     addPortfolioItem({
