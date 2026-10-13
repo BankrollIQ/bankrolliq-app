@@ -5,6 +5,7 @@ import crypto from "node:crypto";
 import { env } from "./config.mjs";
 import { sha256 } from "./auth.mjs";
 import { getJSON, setJSON } from "./store.mjs";
+import { getTester } from "./testers.mjs";
 
 const RECHECK_MS = 6 * 3600000;
 
@@ -64,6 +65,8 @@ export async function refreshFromStripe(email) {
 
 export async function getProAccess(email) {
   if (ownerOverride(email)) return { pro: true, source: "owner-override" };
+  const tester = await getTester(email);
+  if (tester) return { pro: true, source: "tester", expires: tester.expires };
   let rec = await getJSON("entitlements", sha256(email));
   if (!rec || !rec.checkedAt || Date.now() - rec.checkedAt > RECHECK_MS) {
     try {

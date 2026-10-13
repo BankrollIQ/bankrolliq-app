@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<meta content="noindex, nofollow" name="robots"/>
+<title>BankrollIQ Admin</title>
+<link rel="icon" href="/assets/bankrolliq-logo.png"/>
+<style>
+:root{--bg:#070b12;--panel:#101723;--text:#edf4ff;--muted:#a9b6c7;--accent:#5eead4;--accent2:#8ab4ff;--line:#273246}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:radial-gradient(circle at top left,#142033 0,#070b12 42%);color:var(--text);min-height:100vh}
+header{display:flex;align-items:center;gap:14px;padding:16px 7%;border-bottom:1px solid var(--line)}
+header img{height:42px}
+main{padding:24px 7% 60px;max-width:1100px}
+h1{font-size:30px;margin:6px 0 4px}h2{font-size:22px;margin:0 0 12px}
+.card{background:linear-gradient(180deg,rgba(20,29,43,.94),rgba(11,17,27,.94));border:1px solid var(--line);border-radius:18px;padding:20px;margin-top:18px}
+label{display:grid;gap:6px;color:var(--muted);font-size:14px}
+input{width:100%;background:#0a111c;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:11px;font-size:15px}
+.row{display:grid;grid-template-columns:2fr .7fr 1.5fr auto;gap:10px;align-items:end}
+.btn{border-radius:10px;padding:11px 16px;font-weight:800;border:1px solid var(--line);cursor:pointer;font-size:14px;background:rgba(255,255,255,.05);color:var(--text)}
+.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#061019;border:none}
+.muted{color:var(--muted)}.small{font-size:13px}
+.msg{margin-top:12px;padding:10px 12px;border-radius:10px;border:1px solid rgba(94,234,212,.45);background:rgba(94,234,212,.06);color:var(--muted)}
+.err{border-color:rgba(239,68,68,.6);background:rgba(239,68,68,.1);color:#fca5a5}
+table{width:100%;border-collapse:collapse;font-size:14px;color:var(--muted)}
+th,td{border-bottom:1px solid var(--line);padding:9px 6px;text-align:left;vertical-align:top}
+th{color:var(--text);font-size:12px;text-transform:uppercase;letter-spacing:.05em}
+.wrap{overflow-x:auto}
+.badge{display:inline-block;border-radius:999px;padding:3px 9px;font-size:11px;font-weight:900;text-transform:uppercase}
+.on{color:#86efac;background:rgba(34,197,94,.14)}.off{color:#fca5a5;background:rgba(239,68,68,.14)}
+.fb{border-top:1px solid var(--line);padding:12px 0}
+.fb p{margin:6px 0;white-space:pre-wrap;color:var(--text)}
+.fb b{color:var(--muted);font-weight:700}
+.hidden{display:none}
+@media(max-width:760px){.row{grid-template-columns:1fr}main,header{padding-left:16px;padding-right:16px}}
+</style>
+</head>
+<body>
+<header><img src="/assets/bankrolliq-logo.png" alt="BankrollIQ"/><strong>Admin</strong></header>
+<main>
+  <h1>Testers &amp; feedback</h1>
+  <p class="muted">Give free Arbitrage Daily access to testers (no card needed) and read their feedback. Your admin secret is only kept in this tab and is never saved.</p>
+
+  <div class="card" id="unlock">
+    <h2>Unlock</h2>
+    <form id="unlockForm" class="row" style="grid-template-columns:1fr auto">
+      <label>Admin secret (production ADMIN_SECRET)<input id="secret" type="password" autocomplete="off" required/></label>
+      <button class="btn primary" type="submit">Unlock</button>
+    </form>
+    <div id="unlockMsg" class="msg err hidden"></div>
+  </div>
+
+  <div id="panel" class="hidden">
+    <div class="card">
+      <h2>Add a tester</h2>
+      <form id="addForm" class="row">
+        <label>Tester's email<input id="tEmail" type="email" required placeholder="name@email.com"/></label>
+        <label>Days<input id="tDays" type="number" min="1" max="365" value="30" required/></label>
+        <label>Note (optional)<input id="tNote" maxlength="120" placeholder="e.g. Parq poker regular"/></label>
+        <button class="btn primary" type="submit">Give access</button>
+      </form>
+      <div id="addMsg" class="msg hidden"></div>
+      <p class="muted small">Then send them: <strong>https://bankrolliq.app/arbitrage.html</strong> — they enter this same email and get a sign-in link. Adding an existing tester again resets their days from today.</p>
+    </div>
+
+    <div class="card">
+      <h2>Testers</h2>
+      <div class="wrap"><table>
+        <thead><tr><th>Email</th><th>Status</th><th>Access until</th><th>Note</th><th></th></tr></thead>
+        <tbody id="tList"></tbody>
+      </table></div>
+    </div>
+
+    <div class="card">
+      <h2>Feedback <button class="btn small" id="fbRefresh" type="button" style="float:right;padding:6px 10px">Refresh</button></h2>
+      <div id="fbList"></div>
+    </div>
+  </div>
+</main>
+<script>
+let SECRET = "";
+const $ = (id) => document.getElementById(id);
+function h(tag, attrs, ...kids){
+  const el = document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs||{})){ if (k === "class") el.className = v; else if (k.startsWith("on")) el.addEventListener(k.slice(2), v); else el.setAttribute(k, v); }
+  for (const kid of kids.flat()) if (kid !== null && kid !== undefined) el.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+  return el;
+}
+const fmt = (ms) => new Date(ms).toLocaleString("en-US",{month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit"});
+async function call(path, opts){
+  const res = await fetch(path, Object.assign({}, opts||{}, { headers: { "Content-Type":"application/json", "x-admin-secret": SECRET } }));
+  let data = {}; try { data = await res.json(); } catch(e) {}
+  return { ok: res.ok, status: res.status, data };
+}
+function msg(id, text, isErr){ const m = $(id); m.textContent = text; m.className = "msg" + (isErr ? " err" : ""); }
+
+$("unlockForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  SECRET = $("secret").value.trim();
+  const r = await call("/api/admin/testers");
+  if (!r.ok){ SECRET = ""; msg("unlockMsg", r.status === 429 ? "Too many attempts. Wait 15 minutes." : "That secret wasn't accepted.", true); return; }
+  $("secret").value = "";
+  $("unlock").classList.add("hidden"); $("panel").classList.remove("hidden");
+  renderTesters(r.data.testers); loadFeedback();
+});
+
+$("addForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const email = $("tEmail").value.trim();
+  const r = await call("/api/admin/testers", { method: "POST", body: JSON.stringify({ email, days: $("tDays").value, note: $("tNote").value }) });
+  if (!r.ok){ msg("addMsg", "Couldn't add: " + (r.data.error || r.status), true); return; }
+  msg("addMsg", email + " now has access for " + $("tDays").value + " days. Send them https://bankrolliq.app/arbitrage.html");
+  $("tEmail").value = ""; $("tNote").value = "";
+  renderTesters(r.data.testers);
+});
+
+async function removeTester(email){
+  if (!confirmRemove(email)) return;
+  const r = await call("/api/admin/testers?email=" + encodeURIComponent(email), { method: "DELETE" });
+  if (r.ok) renderTesters(r.data.testers);
+}
+function confirmRemove(email){ return window.confirm("Remove tester access for " + email + "?"); }
+
+function renderTesters(list){
+  const tb = $("tList"); tb.replaceChildren();
+  if (!list.length){ tb.append(h("tr",{}, h("td",{colspan:"5", class:"muted"},"No testers yet."))); return; }
+  for (const t of list){
+    tb.append(h("tr",{},
+      h("td",{}, t.email),
+      h("td",{}, h("span",{class:"badge " + (t.active ? "on" : "off")}, t.active ? "Active" : "Expired")),
+      h("td",{}, fmt(t.expires)),
+      h("td",{}, t.note || ""),
+      h("td",{}, h("button",{class:"btn small", type:"button", style:"padding:6px 10px", onclick:() => removeTester(t.email)},"Remove"))));
+  }
+}
+
+async function loadFeedback(){
+  const r = await call("/api/feedback");
+  const box = $("fbList"); box.replaceChildren();
+  if (!r.ok){ box.append(h("p",{class:"muted"},"Couldn't load feedback.")); return; }
+  if (!r.data.feedback.length){ box.append(h("p",{class:"muted"},"No feedback yet.")); return; }
+  for (const f of r.data.feedback){
+    const item = h("div",{class:"fb"},
+      h("div",{class:"small muted"}, fmt(Date.parse(f.at)) + " · " + f.email + " · " + (f.access || "") + (f.rating ? " · " + f.rating + "/5" : "")));
+    for (const [k,label] of [["useful","Most useful"],["improve","Change or improve"],["confusing","Confusing / missing"],["wouldPay","Would pay"]]){
+      if (f[k]) item.append(h("p",{}, h("b",{}, label + ": "), f[k]));
+    }
+    box.append(item);
+  }
+}
+$("fbRefresh").addEventListener("click", loadFeedback);
+</script>
+</body>
+</html>

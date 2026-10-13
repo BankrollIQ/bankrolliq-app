@@ -8,7 +8,7 @@ export default async (req, context) => {
   const session = sessionFromRequest(req);
   if (!session) return json({ signedIn: false, pro: false });
   const access = await getProAccess(session.email);
-  return json({ signedIn: true, email: session.email, pro: access.pro });
+  return json({ signedIn: true, email: session.email, pro: access.pro, access: access.source, expires: access.expires || null });
 };
 
 export const config = { path: "/api/me" };

@@ -82,3 +82,20 @@ Optional (defaults in brackets): `PRO_ALLOW_TRIALING` [true], `PRO_ACCESS_EMAILS
 * Wager limits for regular sportsbooks are not in the feed; they stay "unknown" unless set in `BOOK_TERMS_JSON`.
 * The existing public `get-odds` endpoint still spends credits for anonymous visitors (input is now validated). Consider gating or caching it.
 * Bookmakers restrict accounts that arbitrage consistently; settlement can differ even when prices look aligned.
+
+## Testers (free access) and feedback
+* **Admin page:** `https://bankrolliq.app/admin.html` — unlock with the production `ADMIN_SECRET` (kept only in that browser tab). Add a tester's email and number of days (1–365); remove or extend at any time. No redeploy needed.
+* Testers sign in at `/arbitrage.html` with that email, like members, and see a "Tester access until …" banner.
+* **Feedback form** on the Arbitrage Daily page (members and testers). Each response is stored and emailed to `FEEDBACK_EMAIL` (set this in Netlify; the email uses the existing Resend settings). The admin page also lists all feedback.
+* Admin requests are limited to 30 per 15 minutes per IP.
+
+## My bets & Game Watch (beta)
+* **My bets** (Pro and testers): save a bet already placed (sport, game, team, stake, odds, book, target). The page shows the opposite-side price needed to break even and to lock the target, and the hedge stake. Two-way moneylines only (soccer excluded).
+* **Game Watch:** scheduled function `gamewatch-poll` runs every minute on the published site. From `GAMEWATCH_PREGAME_MINUTES` (60) before kick-off until the game ends, it makes **one Odds API call per sport** for all watched games (cost = number of regions, default 3: `us,us2,us_ex` — `us_ex` includes Kalshi, Polymarket, Novig, ProphetX, BetOpenly). Quotes older than 3 minutes are ignored.
+* When the best opposite price locks at least the member's target, it emails them once (Resend) with the hedge stake, book and locked amount, then stops watching that bet. Exchange fees that aren't configured are called out in the alert. NFL/fight ties are noted.
+* Limits: `GAMEWATCH_MAX_PER_USER` (5 active watches), `GAMEWATCH_MAX_CREDITS_PER_DAY` (1500 Odds API credits/day; polling pauses when reached).
+* Approximate Odds API cost: 3 credits per minute per sport with live watched games → ~630 credits for a 3.5-hour game (shared by everyone watching that sport).
+* Approximate Netlify cost: the every-minute check runs ~43,000 times a month; with no live watches it only reads one small record (roughly 10–30 credits/month).
+* Deploy Previews don't run schedules: `POST /api/gamewatch/run` with `x-admin-secret` runs one cycle on demand.
+* **Links in alerts:** the feed is asked for bookmaker deep links (`includeLinks=true`, no extra credits). Each alert's main button opens the bet slip when the book provides one, otherwise the event page, otherwise the book's home page (`BOOKS` in `netlify/lib/config.mjs`). Links with unfilled placeholders such as `{state}` fall back to the home page.
+* **My sportsbooks:** members tick the books/exchanges they use (`/api/profile`). Game Watch then alerts only on those books and mentions a better price elsewhere, with its own link.

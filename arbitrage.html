@@ -39,6 +39,7 @@ h3{margin-top:0;font-size:20px}
 .featured{border-color:rgba(94,234,212,.75);box-shadow:0 0 0 1px rgba(94,234,212,.25),0 20px 70px rgba(94,234,212,.08)}
 .grid{display:grid;gap:18px}.grid.two{grid-template-columns:repeat(2,1fr)}.grid.four{grid-template-columns:repeat(4,1fr)}
 label{display:grid;gap:7px;color:var(--muted);font-size:14px}
+textarea{width:100%;background:#0a111c;color:var(--text);border:1px solid var(--line);border-radius:12px;padding:12px;font-size:15px;font-family:inherit;resize:vertical}
 input,select{width:100%;background:#0a111c;color:var(--text);border:1px solid var(--line);border-radius:12px;padding:11px;font-size:15px}
 .metric{padding:14px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.035)}
 .metric span{display:block;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.06em}
@@ -69,6 +70,8 @@ ul.notes{margin:8px 0;padding-left:18px;color:var(--muted);line-height:1.6;font-
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .hidden{display:none!important}
 .calcGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.checkGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}.checkGrid label{display:flex;gap:8px;align-items:center;color:var(--text);font-size:14px}.checkGrid input{width:auto;margin:0}
+@media(max-width:520px){.checkGrid{grid-template-columns:1fr 1fr}}
 .listRow{display:flex;justify-content:space-between;gap:14px;padding:12px 0;border-bottom:1px solid var(--line)}
 .listRow:last-of-type{border-bottom:none}
 .listMain{min-width:0;flex:1}
@@ -88,6 +91,7 @@ footer{display:flex;justify-content:space-between;gap:16px;color:var(--muted);bo
   <a class="brand" href="/" aria-label="BankrollIQ homepage"><img class="siteLogo" src="/assets/bankrolliq-logo.png" alt="BankrollIQ logo"/></a>
   <nav>
     <a class="hideSm" href="/#pricing">Pricing</a>
+    <a class="hideSm" href="#mybets">My bets</a>
     <a class="hideSm" href="#calculator">Calculator</a>
     <span id="whoami" class="small"></span>
     <button id="logoutBtn" class="smallBtn hidden" type="button">Sign out</button>
@@ -125,8 +129,46 @@ footer{display:flex;justify-content:space-between;gap:16px;color:var(--muted);bo
 
 <!-- Pro content (rendered only after the server confirms Pro) -->
 <div id="pro" class="hidden">
+  <section class="section hidden" id="testerBanner">
+    <div class="banner info" id="testerText"></div>
+  </section>
+
   <section class="section">
     <div id="reportHead" class="card"></div>
+  </section>
+
+  <section class="section" id="mybets">
+    <div class="sectionHeader">
+      <h2>My bets &amp; Game Watch <span class="badge b-candidate" style="vertical-align:middle">Beta</span></h2>
+      <p>Save a bet you already placed. We show the price the other side needs for you to lock in a profit whichever team wins, and — with Game Watch on — check live prices every minute during the game and email you when your target is available. Two-way moneylines only.</p>
+    </div>
+    <div class="card">
+      <details id="booksBox" style="margin-bottom:16px">
+        <summary style="cursor:pointer;font-weight:800">My sportsbooks <span id="booksCount" class="muted small"></span></summary>
+        <p class="muted small">Pick the books and exchanges you have accounts with. Game Watch only alerts on prices you can actually bet, and mentions when a better price exists elsewhere. Leave all unticked to use every book.</p>
+        <div id="booksList" class="checkGrid"></div>
+        <button class="smallBtn" id="booksSave" type="button" style="margin-top:10px">Save my sportsbooks</button>
+        <span id="booksMsg" class="muted small" style="margin-left:8px"></span>
+      </details>
+      <form id="betForm" class="grid" style="gap:12px">
+        <div class="calcGrid">
+          <label>Sport<select id="bSport"><option value="">Loading…</option></select></label>
+          <label>Game<select id="bGame" disabled><option value="">Pick a sport first</option></select></label>
+          <label>Team you bet on<select id="bSide" disabled><option value="">Pick a game first</option></select></label>
+          <label>Stake ($)<input id="bStake" type="number" min="1" step="0.01" inputmode="decimal" placeholder="100"/></label>
+          <label>Your odds<input id="bOdds" placeholder="+300 or 4.00" inputmode="decimal"/></label>
+          <label>Odds format<select id="bFmt"><option value="american">American</option><option value="decimal">Decimal</option></select></label>
+          <label>Book (optional)<input id="bBook" maxlength="60" placeholder="e.g. FanDuel"/></label>
+          <label>Alert me when I can lock ($)<input id="bTarget" type="number" min="0" step="1" value="0" inputmode="decimal"/></label>
+          <label style="display:flex;gap:8px;align-items:center;align-self:end;padding-bottom:12px"><input id="bWatch" type="checkbox" checked style="width:auto;margin:0"/> Game Watch: email me</label>
+        </div>
+        <div id="bPreview" class="banner info out"></div>
+        <button class="btn primary" type="submit" style="justify-self:start">Save bet</button>
+      </form>
+      <p id="bMsg" class="banner warn hidden" role="status"></p>
+      <div id="betList" style="margin-top:18px"></div>
+      <p class="muted small">Game Watch checks once a minute from an hour before the game until it ends, using sportsbooks and exchanges (including Kalshi and Polymarket where listed). After it emails you, it stops for that bet — turn it back on to keep watching. Prices move fast and books can pause betting; always confirm before placing a hedge.</p>
+    </div>
   </section>
 
   <section class="section" id="allocation">
@@ -159,6 +201,26 @@ footer{display:flex;justify-content:space-between;gap:16px;color:var(--muted);bo
       <p>Current best prices, the opposite-side price needed for an arbitrage, and <span class="badge b-hyp">hypothetical</span> target prices. Hypothetical prices are calculations, not quotes any bookmaker is offering.</p>
     </div>
     <div id="watchBox" class="card"></div>
+  </section>
+
+  <section class="section" id="feedback">
+    <div class="sectionHeader">
+      <h2>Send feedback</h2>
+      <p>Tell us what to change or improve. Every answer goes straight to the BankrollIQ founder.</p>
+    </div>
+    <div class="card" style="max-width:820px">
+      <form id="fbForm" class="grid" style="gap:14px">
+        <label>Overall, how useful is Arbitrage Daily?
+          <select id="fbRating"><option value="">Choose…</option><option value="5">5 — Very useful</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1 — Not useful</option></select>
+        </label>
+        <label>What was most useful?<textarea id="fbUseful" rows="3" maxlength="2000"></textarea></label>
+        <label>What should we change or add? (sports, books, alerts, timing, layout…)<textarea id="fbImprove" rows="4" maxlength="2000"></textarea></label>
+        <label>Anything confusing, wrong or missing?<textarea id="fbConfusing" rows="3" maxlength="2000"></textarea></label>
+        <label>Would you pay for this? If so, how much and how often?<input id="fbPay" maxlength="200" placeholder="e.g. $29/month, or a 7-day pass"/></label>
+        <button class="btn primary" type="submit" style="justify-self:start">Send feedback</button>
+      </form>
+      <p id="fbMsg" class="banner info hidden" role="status"></p>
+    </div>
   </section>
 
   <section class="section" id="coverage">
@@ -257,7 +319,11 @@ async function boot(){
   $("whoami").textContent = me.data.email; show("logoutBtn", true);
   if (!me.data.pro){ $("notProEmail").textContent = me.data.email; show("notPro", true); return; }
   show("access", false); show("pro", true);
-  await Promise.all([loadReport(), loadWatch()]);
+  if (me.data.access === "tester"){
+    $("testerText").textContent = "Tester access" + (me.data.expires ? " until " + new Date(me.data.expires).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) : "") + ". Thanks for trying Arbitrage Daily — please use the feedback form below to tell us what to improve.";
+    show("testerBanner", true);
+  }
+  await Promise.all([loadReport(), loadWatch(), initBets()]);
 }
 
 $("signinForm").addEventListener("submit", async (e) => {
@@ -266,6 +332,16 @@ $("signinForm").addEventListener("submit", async (e) => {
   const r = await api("/api/auth/request-link", { method: "POST", body: JSON.stringify({ email: $("signinEmail").value }) });
   m.textContent = r.data.message || (r.ok ? "Check your email." : "Something went wrong. Please try again.");
   m.classList.remove("hidden");
+});
+$("fbForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const m = $("fbMsg");
+  const r = await api("/api/feedback", { method: "POST", body: JSON.stringify({
+    rating: $("fbRating").value, useful: $("fbUseful").value, improve: $("fbImprove").value,
+    confusing: $("fbConfusing").value, wouldPay: $("fbPay").value }) });
+  m.textContent = r.ok ? "Thank you — your feedback was sent." : (r.data.message || "Couldn't send feedback. Please try again.");
+  m.classList.remove("hidden");
+  if (r.ok) $("fbForm").reset();
 });
 $("logoutBtn").addEventListener("click", async () => { await api("/api/auth/logout", { method: "POST" }); location.href = "/arbitrage.html"; });
 
@@ -455,6 +531,95 @@ function renderCoverage(R){
   box.append(
     h("h4",{style:"margin:16px 0 4px"},"Not covered by this report"),
     h("ul",{class:"notes"}, R.knownUnsupported.map(u => h("li",{}, h("strong",{},u.label + ": "), u.reason))));
+}
+
+// ---------- My bets & Game Watch ----------
+let GAMES = [];
+function oddsToDec(v, fmt){ const x = Number(String(v||"").trim().replace(/^\+/,"")); if (!isFinite(x)) return null; if (fmt === "decimal") return x > 1 ? x : null; if (x >= 100) return 1 + x/100; if (x <= -100) return 1 + 100/Math.abs(x); return null; }
+function decToAm(d){ if (!(d > 1)) return null; return d >= 2 ? Math.round((d-1)*100) : Math.round(-100/(d-1)); }
+function needed(stake, dec, target){ const P = stake*dec, room = P - stake - target; return room > 0 ? P/room : null; }
+
+async function loadBooks(){
+  const r = await api("/api/profile"); if (!r.ok) return;
+  const box = $("booksList"); box.replaceChildren();
+  const mine = new Set(r.data.books);
+  for (const b of r.data.catalog) box.append(h("label",{}, h("input",{type:"checkbox", value:b.key, checked: mine.has(b.key) || null}), b.title));
+  $("booksCount").textContent = mine.size ? "(" + mine.size + " selected)" : "(all books)";
+}
+$("booksSave").addEventListener("click", async () => {
+  const books = [...$("booksList").querySelectorAll("input:checked")].map(x => x.value);
+  const r = await api("/api/profile", { method: "PUT", body: JSON.stringify({ books }) });
+  $("booksMsg").textContent = r.ok ? "Saved." : "Couldn't save.";
+  if (r.ok){ $("booksCount").textContent = r.data.books.length ? "(" + r.data.books.length + " selected)" : "(all books)"; loadBets(); }
+});
+async function initBets(){
+  loadBooks();
+  const r = await api("/api/gamewatch/games");
+  const sel = $("bSport"); sel.replaceChildren(h("option",{value:""}, r.ok ? "Choose a sport" : "Couldn't load sports"));
+  if (r.ok) for (const sp of r.data.sports) sel.append(h("option",{value:sp.key}, sp.title));
+  loadBets();
+}
+$("bSport").addEventListener("change", async () => {
+  const g = $("bGame"), sd = $("bSide");
+  g.disabled = true; sd.disabled = true; sd.replaceChildren(h("option",{value:""},"Pick a game first"));
+  if (!$("bSport").value){ g.replaceChildren(h("option",{value:""},"Pick a sport first")); return; }
+  g.replaceChildren(h("option",{value:""},"Loading games…"));
+  const r = await api("/api/gamewatch/games?sport=" + encodeURIComponent($("bSport").value));
+  GAMES = r.ok ? r.data.games : [];
+  g.replaceChildren(h("option",{value:""}, GAMES.length ? "Choose a game" : "No upcoming or live games"));
+  for (const x of GAMES) g.append(h("option",{value:x.id}, x.away + " @ " + x.home + " — " + pt(x.commence) + (new Date(x.commence) < new Date() ? " (live)" : "")));
+  g.disabled = !GAMES.length;
+});
+$("bGame").addEventListener("change", () => {
+  const x = GAMES.find(y => y.id === $("bGame").value), sd = $("bSide");
+  sd.replaceChildren(h("option",{value:""}, x ? "Choose the team you bet on" : "Pick a game first"));
+  if (x){ sd.append(h("option",{value:x.away}, x.away), h("option",{value:x.home}, x.home)); }
+  sd.disabled = !x; betPreview();
+});
+["bSide","bStake","bOdds","bFmt","bTarget"].forEach(id => $(id).addEventListener("input", betPreview));
+function betPreview(){
+  const out = $("bPreview"), stake = Number($("bStake").value), dec = oddsToDec($("bOdds").value, $("bFmt").value), t = Number($("bTarget").value) || 0;
+  const x = GAMES.find(y => y.id === $("bGame").value), side = $("bSide").value;
+  if (!(stake > 0) || !dec){ out.textContent = "Enter your stake and odds to see what price locks a profit."; return; }
+  const other = x && side ? (side === x.home ? x.away : x.home) : "the other side";
+  const be = needed(stake, dec, 0), tg = needed(stake, dec, t);
+  out.replaceChildren(
+    h("div",{}, "If " + (side || "your team") + " wins you collect " + money(stake*dec) + " (max lockable profit " + money(stake*dec - stake) + ")."),
+    h("div",{}, "Break even: " + other + " at " + am(decToAm(be)) + " (" + dec3(be) + ") or better."),
+    t > 0 ? h("div",{}, tg ? "Lock " + money(t) + ": " + other + " at " + am(decToAm(tg)) + " (" + dec3(tg) + ") or better — hedge stake " + money(Math.ceil(stake*dec/tg*100)/100) + "." : "A " + money(t) + " lock isn't possible on this bet.") : null);
+}
+function dec3(d){ return d ? Number(d).toFixed(3) : "—"; }
+$("betForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const r = await api("/api/bets", { method: "POST", body: JSON.stringify({ sportKey: $("bSport").value, eventId: $("bGame").value, side: $("bSide").value, stake: $("bStake").value, odds: $("bOdds").value, oddsFormat: $("bFmt").value, book: $("bBook").value, targetProfit: $("bTarget").value, watch: $("bWatch").checked }) });
+  const m = $("bMsg");
+  if (!r.ok){ m.textContent = (r.data.errors || ["Couldn't save the bet."]).join(" "); m.classList.remove("hidden"); return; }
+  m.classList.add("hidden"); $("bStake").value = ""; $("bOdds").value = ""; $("bBook").value = ""; betPreview();
+  renderBets(r.data.bets);
+});
+async function loadBets(){ const r = await api("/api/bets"); if (r.ok) renderBets(r.data.bets); }
+async function betAction(method, body, qs){ const r = await api("/api/bets" + (qs || ""), { method, body: body ? JSON.stringify(body) : undefined }); if (r.ok) renderBets(r.data.bets); else { const m = $("bMsg"); m.textContent = (r.data.errors || ["Action failed."]).join(" "); m.classList.remove("hidden"); } }
+function renderBets(list){
+  const box = $("betList"); box.replaceChildren();
+  if (!list.length){ box.append(h("p",{class:"muted"},"No saved bets yet.")); return; }
+  const label = { watching:["b-verified","Watching"], alerted:["b-hyp","Alert sent"], saved:["b-candidate","Saved"], ended:["b-stale","Game ended"] };
+  for (const b of list){
+    const L = b.lock, c = L.current, st = label[b.status] || ["b-candidate", b.status];
+    const row = h("div",{class:"listRow"},
+      h("div",{class:"listMain"},
+        h("div",{class:"ev"}, b.away + " @ " + b.home),
+        h("div",{class:"sub"}, b.sportTitle + " · " + pt(b.commence) + " · " + money(b.stake) + " on " + b.side + " at " + b.oddsEntered + (b.book ? " (" + b.book + ")" : "")),
+        h("div",{class:"sub"}, "Break even needs " + b.other + " " + am(L.breakEvenAmerican) + " or better" + (L.targetProfit > 0 && L.neededAmerican !== null ? " · " + money(L.targetProfit) + " lock needs " + am(L.neededAmerican) : "")),
+        c ? h("div",{class:"sub"}, "Best now (" + ago((Date.now() - Date.parse(b.quoteAt))/60000) + "): " + b.other + " " + am(c.american) + " at ", c.link ? h("a",{href:c.link, target:"_blank", rel:"noopener", style:"color:var(--accent);font-weight:800"}, c.bookTitle + " ↗") : c.bookTitle, " → hedge " + money(c.hedgeStake) + ", locked " + money(c.lockedProfit) + (c.feeStatus === "unknown" ? " before exchange fees" : "")) : h("div",{class:"sub"}, b.watch ? "Live prices appear here once Game Watch starts checking (from 1 hour before the game)." : "Turn on Game Watch to track live prices."),
+        b.betterElsewhere ? h("div",{class:"sub"}, "Better outside your books: " + am(decToAm(b.betterElsewhere.price)) + " at " + b.betterElsewhere.bookTitle) : null,
+        b.tiePossible ? h("div",{class:"sub"},"If it ends in a tie/draw, books usually refund both bets ($0).") : null,
+        (b.alerts || []).length ? h("div",{class:"sub"}, "Last alert " + pt(b.alerts[0].at) + ": lock " + money(b.alerts[0].lockedProfit) + " via " + b.alerts[0].book + " " + am(b.alerts[0].american)) : null),
+      h("div",{class:"listSide"},
+        h("span",{class:"badge " + st[0]}, st[1]),
+        b.status !== "ended" ? h("button",{class:"smallBtn",type:"button",onclick:() => betAction("PATCH",{id:b.id, watch: b.status !== "watching"})}, b.status === "watching" ? "Stop watching" : "Watch again") : null,
+        h("button",{class:"smallBtn",type:"button",onclick:() => betAction("DELETE",null,"?id=" + encodeURIComponent(b.id))},"Remove")));
+    box.append(row);
+  }
 }
 
 // ---------- watch list ----------
