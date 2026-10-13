@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>BankrollIQ Arbitrage Daily™ — Pro</title>
+<meta content="BankrollIQ Arbitrage Daily™: a daily, math-only scan of cross-bookmaker price differences for BankrollIQ Pro members. Educational analytics only." name="description"/>
+<meta content="noindex" name="robots"/>
+<link rel="icon" href="/assets/bankrolliq-logo.png"/>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JQBNBC63DJ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-JQBNBC63DJ');
+</script>
+<style>
+:root{--bg:#070b12;--panel:#101723;--text:#edf4ff;--muted:#a9b6c7;--accent:#5eead4;--accent2:#8ab4ff;--line:#273246;--good:#86efac;--warn:#fcd34d;--bad:#fca5a5}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:radial-gradient(circle at top left,#142033 0,#070b12 42%);color:var(--text)}
+a{color:inherit;text-decoration:none}
+.nav{display:flex;justify-content:space-between;align-items:center;padding:18px 7%;position:sticky;top:0;background:rgba(7,11,18,.88);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);z-index:10}
+.siteLogo{height:54px;width:auto;display:block;object-fit:contain;filter:drop-shadow(0 0 18px rgba(94,234,212,.12))}
+nav{display:flex;gap:22px;color:var(--muted);font-size:14px;align-items:center}
+.hero{padding:56px 7% 24px}
+.pill{display:inline-block;border:1px solid var(--line);background:rgba(94,234,212,.08);color:var(--accent);padding:8px 12px;border-radius:999px;font-size:13px}
+h1{font-size:52px;line-height:1;margin:18px 0;letter-spacing:-2px}
+h2{font-size:30px;margin:0 0 10px}
+h3{margin-top:0;font-size:20px}
+.hero p,.sectionHeader p{color:var(--muted);font-size:17px;line-height:1.55;max-width:900px}
+.btn{display:inline-flex;align-items:center;justify-content:center;border-radius:12px;padding:12px 16px;font-weight:800;border:1px solid var(--line);cursor:pointer;font-size:15px}
+.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#061019;border:none}
+.secondary{background:rgba(255,255,255,.04);color:var(--text)}
+.smallBtn{border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--text);border-radius:10px;padding:7px 10px;cursor:pointer;font-weight:800;font-size:13px}
+.section{padding:28px 7%}
+.sectionHeader{max-width:960px;margin-bottom:18px}
+.card{background:linear-gradient(180deg,rgba(20,29,43,.94),rgba(11,17,27,.94));border:1px solid var(--line);border-radius:22px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.22)}
+.featured{border-color:rgba(94,234,212,.75);box-shadow:0 0 0 1px rgba(94,234,212,.25),0 20px 70px rgba(94,234,212,.08)}
+.grid{display:grid;gap:18px}.grid.two{grid-template-columns:repeat(2,1fr)}.grid.four{grid-template-columns:repeat(4,1fr)}
+label{display:grid;gap:7px;color:var(--muted);font-size:14px}
+input,select{width:100%;background:#0a111c;color:var(--text);border:1px solid var(--line);border-radius:12px;padding:11px;font-size:15px}
+.metric{padding:14px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.035)}
+.metric span{display:block;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+.metric strong{display:block;font-size:22px;margin-top:5px}
+.muted{color:var(--muted)}.small{font-size:13px}
+.badge{display:inline-flex;border-radius:999px;padding:5px 10px;font-weight:900;font-size:11px;letter-spacing:.05em;text-transform:uppercase;border:1px solid}
+.b-verified{color:var(--good);border-color:rgba(34,197,94,.6);background:rgba(34,197,94,.12)}
+.b-candidate{color:#93c5fd;border-color:rgba(59,130,246,.6);background:rgba(59,130,246,.12)}
+.b-stale{color:var(--warn);border-color:rgba(234,179,8,.6);background:rgba(234,179,8,.12)}
+.b-bad{color:var(--bad);border-color:rgba(239,68,68,.6);background:rgba(239,68,68,.12)}
+.b-hyp{color:#f0abfc;border-color:rgba(217,70,239,.6);background:rgba(217,70,239,.12)}
+.banner{border-radius:16px;padding:14px 16px;margin:14px 0;line-height:1.5}
+.banner.warn{border:1px solid rgba(234,179,8,.6);background:rgba(234,179,8,.10);color:#fde68a}
+.banner.info{border:1px solid rgba(94,234,212,.45);background:rgba(94,234,212,.06);color:var(--muted)}
+.tableWrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:10px}
+table{width:100%;border-collapse:collapse;font-size:14px;color:var(--muted)}
+th,td{border-bottom:1px solid var(--line);padding:9px 8px;text-align:left;white-space:nowrap}
+th{color:var(--text);font-size:12px;text-transform:uppercase;letter-spacing:.05em}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+details.cand{border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.025);margin-bottom:12px}
+details.cand>summary{list-style:none;cursor:pointer;padding:16px;display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+details.cand>summary::-webkit-details-marker{display:none}
+details.cand .body{padding:0 16px 16px}
+.roi{font-size:24px;font-weight:950;color:var(--accent);text-align:right}
+.ev{font-weight:800}.sub{color:var(--muted);font-size:13px;margin-top:4px}
+ul.notes{margin:8px 0;padding-left:18px;color:var(--muted);line-height:1.6;font-size:14px}
+.sev-high{color:var(--bad)}.sev-medium{color:var(--warn)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.hidden{display:none!important}
+.calcGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.listRow{display:flex;justify-content:space-between;gap:14px;padding:12px 0;border-bottom:1px solid var(--line)}
+.listRow:last-of-type{border-bottom:none}
+.listMain{min-width:0;flex:1}
+.listSide{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none;text-align:right}
+.gap{font-weight:900;color:var(--accent);font-variant-numeric:tabular-nums}
+.scrollHint{display:none;font-size:12px;color:var(--muted);margin-top:6px}
+@media(max-width:700px){.scrollHint{display:block}}
+.out{font-variant-numeric:tabular-nums}
+footer{display:flex;justify-content:space-between;gap:16px;color:var(--muted);border-top:1px solid var(--line);padding:28px 7%;font-size:14px;margin-top:30px}
+.disclaimer p{color:var(--muted);line-height:1.7;max-width:1100px}
+@media(max-width:900px){h1{font-size:38px}nav a.hideSm{display:none}.grid.two,.grid.four,.calcGrid{grid-template-columns:1fr 1fr}.nav{padding:14px 16px}.section,.hero{padding-left:16px;padding-right:16px}.siteLogo{height:42px}footer{display:block}}
+@media(max-width:520px){.grid.two,.grid.four,.calcGrid{grid-template-columns:1fr}.roi{font-size:20px}}
+</style>
+</head>
+<body>
+<header class="nav">
+  <a class="brand" href="/" aria-label="BankrollIQ homepage"><img class="siteLogo" src="/assets/bankrolliq-logo.png" alt="BankrollIQ logo"/></a>
+  <nav>
+    <a class="hideSm" href="/#pricing">Pricing</a>
+    <a class="hideSm" href="#calculator">Calculator</a>
+    <span id="whoami" class="small"></span>
+    <button id="logoutBtn" class="smallBtn hidden" type="button">Sign out</button>
+  </nav>
+</header>
+
+<main>
+<section class="hero">
+  <span class="pill">Included with BankrollIQ Pro</span>
+  <h1>Arbitrage Daily™</h1>
+  <p>Every day at 9:00 a.m. PST, BankrollIQ compares matching markets across bookmakers and lists the price combinations where backing every outcome would mathematically return more than the total stake — after known fees. It reports what the odds feed shows. It does not invent opportunities or promise earnings.</p>
+</section>
+
+<!-- Sign-in / access state -->
+<section class="section" id="access">
+  <div id="loading" class="card"><p class="muted">Checking your access…</p></div>
+
+  <div id="signin" class="card featured hidden" style="max-width:640px">
+    <h3>Pro member sign in</h3>
+    <p class="muted">Enter the email you used for your Stripe Pro subscription. We'll email a one-time sign-in link (valid 15 minutes).</p>
+    <form id="signinForm" class="grid" style="gap:12px">
+      <label>Email<input id="signinEmail" type="email" required autocomplete="email" placeholder="you@email.com"/></label>
+      <button class="btn primary" type="submit">Email me a sign-in link</button>
+    </form>
+    <p id="signinMsg" class="banner info hidden" role="status"></p>
+    <p class="muted small">Not on Pro yet? <a class="btnLink" style="color:var(--accent);font-weight:800" href="https://buy.stripe.com/fZu7sM8DI3gsdui4itfIs02" target="_blank" rel="noopener" onclick="trackCheckout('pro_arbitrage_daily')">Start the Pro trial</a> — Arbitrage Daily is included.</p>
+  </div>
+
+  <div id="notPro" class="card hidden" style="max-width:640px">
+    <h3>Arbitrage Daily is part of BankrollIQ Pro</h3>
+    <p class="muted">You're signed in as <strong id="notProEmail"></strong>, but we couldn't find an active Pro subscription for that email. If you just subscribed, give it a minute and refresh. If you subscribed with another email, sign out and use that one.</p>
+    <a class="btn primary" href="https://buy.stripe.com/fZu7sM8DI3gsdui4itfIs02" target="_blank" rel="noopener" onclick="trackCheckout('pro_arbitrage_daily')">Start Pro Trial</a>
+  </div>
+</section>
+
+<!-- Pro content (rendered only after the server confirms Pro) -->
+<div id="pro" class="hidden">
+  <section class="section">
+    <div id="reportHead" class="card"></div>
+  </section>
+
+  <section class="section" id="allocation">
+    <div class="sectionHeader">
+      <h2>$500 daily target — feasibility</h2>
+      <p>Two separate checks of whether today's candidates could reach $500 combined worst-case profit. The <strong>verified plan</strong> uses only opportunities whose fees, terms and wager limits were confirmed, sized within those limits. The <strong>theoretical plan</strong> also uses unverified candidates and is a calculation, not a plan to act on. Each dollar is counted once, and positions where a push or tie returns $0 are left out.</p>
+    </div>
+    <div id="allocBox" class="card"></div>
+  </section>
+
+  <section class="section" id="candidates">
+    <div class="sectionHeader">
+      <h2>Ranked by net ROI</h2>
+      <p><span class="badge b-verified">Verified opportunity</span> means fees, settlement terms and available wager sizes were confirmed for every book. <span class="badge b-candidate">Mathematical candidate</span> means the quoted prices add up, but something still needs checking — listed on each card.</p>
+    </div>
+    <div id="candList"></div>
+  </section>
+
+  <section class="section" id="near">
+    <div class="sectionHeader">
+      <h2>Near misses</h2>
+      <p>Markets within a couple of percent of an arbitrage. Add one to your watch list to track the price the other side would need.</p>
+    </div>
+    <div id="nearBox" class="card"></div>
+  </section>
+
+  <section class="section" id="watch">
+    <div class="sectionHeader">
+      <h2>Watch list</h2>
+      <p>Current best prices, the opposite-side price needed for an arbitrage, and <span class="badge b-hyp">hypothetical</span> target prices. Hypothetical prices are calculations, not quotes any bookmaker is offering.</p>
+    </div>
+    <div id="watchBox" class="card"></div>
+  </section>
+
+  <section class="section" id="coverage">
+    <div class="sectionHeader">
+      <h2>Feed coverage</h2>
+      <p>What the odds feed covered in this report, what was out of season, and what isn't supported.</p>
+    </div>
+    <div id="coverageBox" class="card"></div>
+  </section>
+</div>
+
+<section class="section" id="calculator">
+  <div class="sectionHeader">
+    <h2>Odds &amp; arbitrage calculator</h2>
+    <p>Enter prices you see yourself. Works with American or decimal odds and exchange commission. Nothing here is fetched or stored.</p>
+  </div>
+  <div class="card">
+    <div class="row" style="margin-bottom:12px">
+      <label style="max-width:220px">Odds format
+        <select id="cFmt"><option value="american">American (+150 / −120)</option><option value="decimal">Decimal (2.50)</option></select>
+      </label>
+      <label style="max-width:220px">Outcomes
+        <select id="cN"><option value="2">2 (two-way)</option><option value="3">3 (three-way)</option></select>
+      </label>
+      <label style="max-width:220px">Total bankroll ($)
+        <input id="cBank" type="number" min="1" step="1" value="1000" inputmode="decimal"/>
+      </label>
+      <label style="display:flex;gap:8px;align-items:center;max-width:340px;align-self:end;padding-bottom:12px"><input id="cPush" type="checkbox" style="width:auto;margin:0"/> Push / tie possible (whole-number line, NFL tie, fight draw)</label>
+    </div>
+    <div id="cRows" class="calcGrid"></div>
+    <div id="cOut" class="banner info out" aria-live="polite"></div>
+  </div>
+</section>
+
+<section class="section disclaimer" id="disclaimer">
+  <h2>Important</h2>
+  <p>BankrollIQ Arbitrage Daily™ is educational analytics. It is not betting, financial, legal or tax advice and does not guarantee any outcome or daily earnings. Prices are snapshots from a third-party odds feed and can change or be withdrawn at any moment; bookmakers can reject, limit or void wagers, settle the same event differently, and restrict accounts. Always confirm the live price, the maximum wager, and the settlement rules at each bookmaker before placing anything. Sports wagering is legal only in some jurisdictions and only for adults (18+/21+ where applicable). If gambling stops being fun, contact 1-800-GAMBLER (US) or your local support service.</p>
+</section>
+</main>
+
+<footer>
+  <div>© 2026 BankrollIQ. Operated by Ziggy Digital Group LLC.</div>
+  <div>Prediction Intelligence Platform.</div>
+</footer>
+
+<script>
+function trackCheckout(plan){ if (typeof gtag === "function") gtag("event","begin_checkout",{plan:plan,currency:"USD"}); }
+
+// ---------- tiny DOM helper (text only — no HTML injection from feed data) ----------
+function h(tag, attrs, ...kids){
+  const el = document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs||{})){
+    if (v === null || v === undefined || v === false) continue;
+    if (k === "class") el.className = v;
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v === true ? "" : v);
+  }
+  for (const kid of kids.flat()){
+    if (kid === null || kid === undefined || kid === false) continue;
+    el.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+  }
+  return el;
+}
+const $ = (id) => document.getElementById(id);
+const money = (n) => (n < 0 ? "−$" : "$") + Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const money0 = (n) => "$" + Math.round(n).toLocaleString("en-US");
+const am = (a) => a === null || a === undefined ? "—" : (a > 0 ? "+" + a : String(a));
+const dec = (d) => d === null || d === undefined ? "—" : Number(d).toFixed(3);
+const pct = (r) => (r * 100).toFixed(2) + "%";
+function pt(iso){
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return d.toLocaleString("en-US",{timeZone:"America/Los_Angeles",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}) + " PT";
+}
+function ago(min){ if (min === null || min === undefined) return "unknown age"; if (min < 60) return Math.round(min) + " min ago"; return (min/60).toFixed(1) + " h ago"; }
+function appendAll(el, ...kids){ el.append(...kids.filter(k => k !== null && k !== undefined && k !== false)); }
+function mkt(x){ return x.lineLabel && !x.lineLabel.startsWith(x.marketLabel) ? x.marketLabel + ": " + x.lineLabel : (x.lineLabel || x.marketLabel); }
+function show(id, on){ $(id).classList.toggle("hidden", !on); }
+
+async function api(path, opts){
+  const res = await fetch(path, Object.assign({ credentials: "same-origin", headers: { "Content-Type": "application/json" } }, opts||{}));
+  let data = null; try { data = await res.json(); } catch(e) {}
+  return { status: res.status, ok: res.ok, data: data || {} };
+}
+
+// ---------- access ----------
+async function boot(){
+  const params = new URLSearchParams(location.search);
+  const me = await api("/api/me");
+  show("loading", false);
+  if (!me.ok || !me.data.signedIn){
+    show("signin", true);
+    if (params.get("signin") === "expired"){ const m=$("signinMsg"); m.textContent="That sign-in link has expired or was already used. Request a new one."; m.classList.remove("hidden"); }
+    return;
+  }
+  $("whoami").textContent = me.data.email; show("logoutBtn", true);
+  if (!me.data.pro){ $("notProEmail").textContent = me.data.email; show("notPro", true); return; }
+  show("access", false); show("pro", true);
+  await Promise.all([loadReport(), loadWatch()]);
+}
+
+$("signinForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const m = $("signinMsg");
+  const r = await api("/api/auth/request-link", { method: "POST", body: JSON.stringify({ email: $("signinEmail").value }) });
+  m.textContent = r.data.message || (r.ok ? "Check your email." : "Something went wrong. Please try again.");
+  m.classList.remove("hidden");
+});
+$("logoutBtn").addEventListener("click", async () => { await api("/api/auth/logout", { method: "POST" }); location.href = "/arbitrage.html"; });
+
+// ---------- report ----------
+let REPORT = null;
+async function loadReport(){
+  const r = await api("/api/arb/report");
+  const head = $("reportHead"); head.replaceChildren();
+  if (!r.ok){ head.append(h("p",{class:"muted"},"Couldn't load the report (" + r.status + ").")); return; }
+  REPORT = r.data.report;
+  if (!REPORT){ head.append(h("h3",{},"No report yet"), h("p",{class:"muted"}, r.data.message || "")); return; }
+  renderHead(REPORT); renderAlloc(REPORT); renderCandidates(REPORT); renderNear(REPORT); renderCoverage(REPORT);
+}
+
+function renderHead(R){
+  const head = $("reportHead");
+  appendAll(head,
+    h("div",{class:"row",style:"justify-content:space-between"},
+      h("h3",{style:"margin:0"},"Report generated " + pt(R.generatedAt)),
+      h("span",{class:"badge " + (R.pricesStale ? "b-stale" : "b-verified")}, R.pricesStale ? "Prices stale" : "Fresh")),
+    h("p",{class:"muted small"}, "Schedule: " + R.schedule.label + " · " + new Date(R.generatedAt).toISOString().replace("T"," ").slice(0,16) + " UTC · " + (R.trigger === "manual" ? "manual run" : "scheduled run") + " · regions " + (R.regions||"—")),
+    R.staleNotice ? h("div",{class:"banner warn"}, R.staleNotice) : null,
+    R.feedProblem ? h("div",{class:"banner warn"}, "This is the last successful report. " + R.feedProblem.message + " (" + pt(R.feedProblem.at) + ")") : null,
+    h("div",{class:"grid four",style:"margin-top:12px"},
+      metric("Events scanned", R.stats.eventsScanned),
+      metric("Markets compared", R.stats.marketsCompared),
+      metric("Mathematical candidates", R.stats.candidates),
+      metric("Verified opportunities", R.stats.verified)),
+    R.fetchErrors && R.fetchErrors.length ? h("div",{class:"banner warn"}, "Feed errors for: " + R.fetchErrors.map(e => e.key).join(", ") + ". Those sports are missing from this report.") : null,
+    h("p",{class:"muted small"}, "Odds feed credits used this run: " + (R.creditsUsed ?? "—") + (R.usage && R.usage.remaining ? " · remaining this month: " + R.usage.remaining.toLocaleString() : ""))
+  );
+}
+function metric(label, value){ return h("div",{class:"metric"}, h("span",{},label), h("strong",{}, String(value))); }
+
+function renderAlloc(R){
+  const box = $("allocBox"); box.replaceChildren();
+  const A = R.allocations || {};
+  for (const key of ["verified","theoretical"]){
+    const P = A[key]; if (!P) continue;
+    const isV = key === "verified";
+    const wrap = h("div",{style:"padding:6px 0 18px;border-bottom:1px solid var(--line);margin-bottom:14px"},
+      h("div",{class:"row",style:"justify-content:space-between"},
+        h("h3",{style:"margin:0"}, P.label),
+        h("span",{class:"badge " + (isV ? "b-verified" : "b-candidate")}, isV ? "Verified inputs only" : "Unverified — calculation only")));
+    if (!P.positions.length){
+      wrap.append(h("p",{class:"muted"}, isV
+        ? "No verified opportunities today, so there is no verified plan. Add confirmed fees, terms and wager limits per bookmaker (BOOK_TERMS_JSON) to make verification possible."
+        : "No eligible candidates today. Candidates are left out when a price was stale, a fee is unknown, a push/tie is possible, settlement rules can break the hedge, or the event starts more than " + R.settings.windowHours + " h after the report."));
+      box.append(wrap); continue;
+    }
+    wrap.append(
+      h("div",{class:"grid four",style:"margin-top:12px"},
+        metric("Target", money0(P.target)),
+        metric("Worst-case profit", money(P.projectedWorstCaseProfit)),
+        metric("Capital required", money(P.capitalRequired)),
+        metric(P.feasible ? "Reachable on paper" : "Not reachable", P.positions.length + " position" + (P.positions.length === 1 ? "" : "s"))),
+      h("div",{class:"tableWrap"}, h("table",{},
+        h("thead",{}, h("tr",{}, h("th",{},"Event"), h("th",{},"Market"), h("th",{},"Stakes"), h("th",{},"Per-event cap"), h("th",{class:"num"},"Capital"), h("th",{class:"num"},"Worst-case profit"))),
+        h("tbody",{}, P.positions.map(p => h("tr",{},
+          h("td",{}, p.event), h("td",{}, p.lineLabel),
+          h("td",{}, p.legs.map(l => money0(l.stake) + " " + l.outcome + " @ " + l.book).join(" · ")),
+          h("td",{class:"small"}, money0(p.cap) + " — " + p.capSource),
+          h("td",{class:"num"}, money(p.totalStaked)), h("td",{class:"num"}, money(p.worstCaseProfit))))))),
+      h("p",{class:"muted small"}, "Deposits needed by bookmaker: " + Object.entries(P.depositsByBook).map(([b,v]) => b + " " + money0(v)).join(" · ")),
+      h("p",{class:"muted small"}, P.note));
+    box.append(wrap);
+  }
+}
+
+function legTable(c){
+  return h("div",{}, h("div",{class:"scrollHint"},"Swipe tables sideways to see every column →"), h("div",{class:"tableWrap"}, h("table",{},
+    h("thead",{}, h("tr",{}, h("th",{},"Outcome"), h("th",{},"Bookmaker"), h("th",{class:"num"},"American"), h("th",{class:"num"},"Decimal"), h("th",{class:"num"},"Net after fee"), h("th",{},"Fee"), h("th",{},"Quoted at"), h("th",{},"Wager limit"))),
+    h("tbody",{}, c.legs.map(l => h("tr",{},
+      h("td",{}, l.outcome + (l.point !== null && l.point !== undefined && c.marketKey !== "h2h" ? " " + (l.point > 0 ? "+" : "") + l.point : "")),
+      h("td",{}, l.bookTitle),
+      h("td",{class:"num"}, am(l.american)), h("td",{class:"num"}, dec(l.price)), h("td",{class:"num"}, dec(l.net)),
+      h("td",{}, feeLabel(l)),
+      h("td",{}, pt(l.lastUpdate) + " (" + ago(l.ageMinutes) + " at run)", l.stale ? h("span",{class:"badge b-stale",style:"margin-left:6px"},"stale") : null),
+      h("td",{}, l.limit ? money0(l.limit) + " (" + l.limitSource + ")" : "unknown")))))));
+}
+function feeLabel(l){
+  const map = { "verified": "verified", "standard-no-commission": "no commission (standard, unverified)", "assumed": "assumed", "unknown": "UNKNOWN" };
+  return (l.commission ? (l.commission*100).toFixed(1) + "% · " : "0% · ") + (map[l.feeStatus] || l.feeStatus);
+}
+
+function scenarioTable(c){
+  const stateLabels = c.scenarios[0].states.map(x => x.label);
+  const mm = c.scenarios[0].mismatchStates.length > 0;
+  return h("div",{class:"tableWrap"}, h("table",{},
+    h("thead",{}, h("tr",{},
+      h("th",{},"Bankroll"),
+      ...c.legs.map(l => h("th",{class:"num"}, "Stake: " + l.outcome + " (" + l.bookTitle + ")")),
+      h("th",{class:"num"},"Total staked"),
+      ...stateLabels.map(lbl => h("th",{class:"num"}, "If " + lbl)),
+      h("th",{class:"num"},"Event voided"),
+      h("th",{class:"num"},"Guaranteed min."),
+      mm ? h("th",{class:"num"},"Rule-mismatch worst") : null)),
+    h("tbody",{}, c.scenarios.map(s => h("tr",{},
+      h("td",{}, money0(s.bankroll), s.limitBound ? h("span",{class:"badge b-stale",style:"margin-left:6px"},"cut to limits") : null),
+      ...s.stakes.map(v => h("td",{class:"num"}, money0(v))),
+      h("td",{class:"num"}, money(s.totalStaked)),
+      ...s.states.map(x => h("td",{class:"num"}, money(x.profit))),
+      h("td",{class:"num"}, s.voidAll ? money(s.voidAll.profit) : "—"),
+      h("td",{class:"num"}, h("strong",{}, money(s.worstCaseProfit))),
+      mm ? h("td",{class:"num sev-high"}, money(s.mismatchWorstProfit)) : null)))));
+}
+
+function target500Text(c){
+  const t = c.target500;
+  if (!t) return "A $500 target isn't reachable on this event.";
+  if (!t.reachable) return "$500 isn't reachable within the known wager limits: the most these limits allow is " + money(t.maxProfitWithinLimits) + " (" + t.plan.stakes.map((s,i) => money0(s) + " " + c.legs[i].outcome).join(" + ") + ").";
+  const stakes = t.plan.stakes.map((s,i) => money0(s) + " " + c.legs[i].outcome).join(" + ");
+  if (!t.guaranteed) return "Sized for $500 only if the result is decisive: " + money(t.plan.totalStaked) + " total (" + stakes + "). If it pushes or ties, every wager is refunded and profit is $0 — so $500 is NOT guaranteed.";
+  return "Capital for $500 worst-case profit: " + money(t.plan.totalStaked) + " total (" + stakes + ") → " + money(t.plan.worstCaseProfit) + " in every normal outcome." + (c.capacity === null ? " Wager limits are unknown — books may not accept this size." : c.capacityVerified === null ? " Limits shown are not operator-verified." : "");
+}
+
+function renderCandidates(R){
+  const list = $("candList"); list.replaceChildren();
+  if (!R.candidates.length){
+    list.append(h("div",{class:"card"}, h("p",{class:"muted"},"No arbitrage combinations in today's feed. That's normal — they're rare and short-lived. Nothing has been added to fill the space.")));
+    return;
+  }
+  for (const c of R.candidates){
+    const status = c.status === "verified" ? h("span",{class:"badge b-verified"},"Verified opportunity") : h("span",{class:"badge b-candidate"},"Mathematical candidate");
+    list.append(h("details",{class:"cand"},
+      h("summary",{},
+        h("div",{},
+          h("div",{class:"row"}, status, c.flags.pushPossible ? h("span",{class:"badge b-stale"},"Push possible — min $0") : null, c.flags.stale ? h("span",{class:"badge b-stale"},"Stale price") : null, c.flags.highRoi ? h("span",{class:"badge b-bad"},"Unusually high") : null),
+          h("div",{class:"ev",style:"margin-top:8px"}, c.away + " @ " + c.home),
+          h("div",{class:"sub"}, c.sportTitle + " · " + mkt(c) + " · starts " + pt(c.commence))),
+        h("div",{}, h("div",{class:"roi"}, pct(c.roi)), h("div",{class:"sub",style:"text-align:right"},"net ROI"))),
+      h("div",{class:"body"},
+        legTable(c),
+        c.verificationGaps.length ? h("div",{}, h("h4",{style:"margin:14px 0 4px"},"Still to verify"), h("ul",{class:"notes"}, c.verificationGaps.map(g => h("li",{},g)))) : null,
+        h("h4",{style:"margin:14px 0 4px"},"Settlement differences to check"),
+        h("ul",{class:"notes"}, c.settlement.map(n => h("li",{class:"sev-" + n.severity}, "[" + n.severity + "] " + n.text))),
+        h("h4",{style:"margin:14px 0 4px"},"Exact stakes by bankroll"),
+        scenarioTable(c),
+        h("p",{class:"muted small"}, target500Text(c)),
+        h("p",{class:"muted small"}, "Stakes are rounded down to whole dollars and never exceed the bankroll or any known wager limit. “Event voided” means every wager is refunded. Rule-mismatch rows show what happens if the books apply different rules (for example one voids and the other settles)."),
+        h("div",{class:"row"}, h("button",{class:"smallBtn",type:"button",onclick:() => addWatch(c.id)},"Add to watch list"))
+      )));
+  }
+}
+
+function renderNear(R){
+  const box = $("nearBox"); box.replaceChildren();
+  if (!R.nearMisses.length){ box.append(h("p",{class:"muted"},"No near misses in this report.")); return; }
+  const SHOW = 15;
+  const rows = R.nearMisses.map(n => h("div",{class:"listRow"},
+    h("div",{class:"listMain"},
+      h("div",{class:"ev"}, n.away + " @ " + n.home),
+      h("div",{class:"sub"}, n.sportTitle + " · " + mkt(n) + " · " + pt(n.commence)),
+      h("div",{class:"sub"}, "Best: " + n.legs.map(l => l.outcome + " " + am(l.american) + " (" + l.bookTitle + ")").join(" · "))),
+    h("div",{class:"listSide"},
+      h("div",{class:"gap"}, ((n.impliedSum - 1) * 100).toFixed(2) + "%"),
+      h("div",{class:"sub"},"from an arb"),
+      h("button",{class:"smallBtn",type:"button",onclick:() => addWatch(n.id)},"Watch"))));
+  rows.forEach((r,i) => { if (i >= SHOW) r.classList.add("hidden"); });
+  box.append(...rows);
+  if (rows.length > SHOW){
+    const more = h("button",{class:"smallBtn",type:"button",style:"margin-top:12px"},"Show all " + rows.length);
+    more.addEventListener("click", () => { rows.forEach(r => r.classList.remove("hidden")); more.remove(); });
+    box.append(more);
+  }
+}
+
+function renderCoverage(R){
+  const box = $("coverageBox"); box.replaceChildren();
+  const groups = [];
+  for (const c of R.coverage){
+    let g = groups.find(x => x.name === c.group);
+    if (!g){ g = { name: c.group, scanned: [], inactive: [], unsupported: [] }; groups.push(g); }
+    g[c.status].push(c);
+  }
+  const names = (arr) => arr.map(c => c.title || c.key).join(", ");
+  for (const g of groups){
+    const status = g.scanned.length ? ["b-verified","Scanned"] : g.inactive.length ? ["b-stale","Off-season"] : ["b-bad","Unsupported"];
+    const lines = [];
+    if (g.scanned.length) lines.push("Scanned: " + names(g.scanned) + (g.scanned[0].markets ? " (" + g.scanned[0].markets.replace(/h2h/g,"moneyline").replace(/,/g,", ") + ")" : ""));
+    if (g.inactive.length) lines.push(g.inactive.length > 3 ? g.inactive.length + " other tournaments/leagues off-season or with no events today" : "Off-season / no events: " + names(g.inactive));
+    if (g.unsupported.length) lines.push("Not supported by the feed: " + names(g.unsupported));
+    box.append(h("div",{class:"listRow"},
+      h("div",{class:"listMain"}, h("div",{class:"ev"}, g.name), ...lines.map(t => h("div",{class:"sub"}, t))),
+      h("div",{class:"listSide"}, h("span",{class:"badge " + status[0]}, status[1]))));
+  }
+  box.append(
+    h("h4",{style:"margin:16px 0 4px"},"Not covered by this report"),
+    h("ul",{class:"notes"}, R.knownUnsupported.map(u => h("li",{}, h("strong",{},u.label + ": "), u.reason))));
+}
+
+// ---------- watch list ----------
+async function addWatch(id){
+  const r = await api("/api/arb/watchlist", { method: "POST", body: JSON.stringify({ id }) });
+  if (!r.ok) { alert(r.data.message || "Couldn't add to watch list."); return; }
+  renderWatch(r.data); document.getElementById("watch").scrollIntoView({ behavior: "smooth" });
+}
+async function loadWatch(){ const r = await api("/api/arb/watchlist"); if (r.ok) renderWatch(r.data); }
+async function removeWatch(id){ const r = await api("/api/arb/watchlist?id=" + encodeURIComponent(id), { method: "DELETE" }); if (r.ok) renderWatch(r.data); }
+async function refreshSport(key){
+  const r = await api("/api/arb/watchlist", { method: "POST", body: JSON.stringify({ refresh: key }) });
+  if (!r.ok) { alert(r.data.detail || r.data.error || "Refresh failed."); return; }
+  renderWatch(r.data);
+}
+
+function renderWatch(data){
+  const box = $("watchBox"); box.replaceChildren();
+  if (!data.items.length){ box.append(h("p",{class:"muted"},"Nothing watched yet. Use “Watch” on a near miss or a candidate.")); return; }
+  for (const w of data.items){
+    const head = h("div",{class:"row",style:"justify-content:space-between"},
+      h("div",{}, h("div",{class:"ev"}, w.label), h("div",{class:"sub"}, w.available ? ("Prices as of " + pt(w.asOf) + " (" + (w.source === "live-refresh" ? "live refresh" : "daily report") + ")") : w.message)),
+      h("div",{class:"row"},
+        w.available ? h("button",{class:"smallBtn",type:"button",onclick:() => refreshSport(w.sportKey)},"Refresh prices") : null,
+        h("button",{class:"smallBtn",type:"button",onclick:() => removeWatch(w.id)},"Remove")));
+    const card = h("div",{style:"border-top:1px solid var(--line);padding:14px 0"}, head);
+    if (w.available){
+      const v = w.view;
+      card.append(
+        h("p",{class:"small " + (v.isArb ? "" : "muted")}, v.isArb ? "Current best prices form an arbitrage of " + pct(v.roi) + " (mathematical — verify before acting)." : "Not an arbitrage right now: combined implied probability " + (v.impliedSum*100).toFixed(2) + "%."),
+        h("div",{class:"tableWrap"}, h("table",{},
+          h("thead",{}, h("tr",{}, h("th",{},"Outcome"), h("th",{},"Current best"), h("th",{},"Book · age"), h("th",{},"Needed for arb (net)"))),
+          h("tbody",{}, v.outcomes.map(o => h("tr",{},
+            h("td",{}, o.name + (o.point !== null && o.point !== undefined && v.marketKey !== "h2h" ? " " + (o.point > 0 ? "+" : "") + o.point : "")),
+            h("td",{}, am(o.best.american) + " (" + dec(o.best.price ?? o.best.net) + ")"),
+            h("td",{}, (o.best.bookTitle || o.best.book) + " · " + ago(o.priceAgeMinutes), o.priceStale ? h("span",{class:"badge b-stale",style:"margin-left:6px"},"stale") : null),
+            h("td",{}, o.threshold ? "better than " + am(o.threshold.american) + " (" + dec(o.threshold.netDecimal) + ")" : "not possible vs. current prices")))))),
+        h("h4",{style:"margin:14px 0 4px"}, h("span",{class:"badge b-hyp",style:"margin-right:8px"},"Hypothetical"), "Target prices — calculations, not quotes"),
+        h("div",{class:"tableWrap"}, h("table",{},
+          h("thead",{}, h("tr",{}, h("th",{},"If this side were priced at"), h("th",{class:"num"},"ROI"), h("th",{},"Stakes for $1,000"), h("th",{class:"num"},"Worst case"), h("th",{},"Capital for $500"))),
+          h("tbody",{}, v.outcomes.flatMap(o => o.hypotheticalTargets.filter(t => t.decimal).map(t => h("tr",{},
+            h("td",{}, o.name + " " + am(t.american) + " (" + dec(t.decimal) + ")"),
+            h("td",{class:"num"}, t.targetRoiPct.toFixed(0) + "%"),
+            h("td",{}, t.example.stakes.map(x => money0(x.stake) + " " + x.outcome + " @ " + x.book).join(" · ")),
+            h("td",{class:"num"}, money(t.example.worstCaseProfit) + (t.example.pushPossible ? " (push = $0)" : "")),
+            h("td",{}, t.capitalFor500 ? money(t.capitalFor500.capital) + " (" + t.capitalFor500.stakes.map((x,i) => money0(x) + " " + v.outcomes[i].name).join(" + ") + ")" + (t.capitalFor500.guaranteed ? "" : " — not guaranteed: a push returns $0") : "n/a"))))))),
+        h("p",{class:"muted small"}, "“Needed for arb” is the price this outcome must beat at a different book, using the current best price on the other side(s). Hypothetical rows assume no commission on that side and unknown wager limits; no bookmaker is quoting those prices."));
+    }
+    box.append(card);
+  }
+}
+
+// ---------- calculator (public, client-side only) ----------
+function toDec(v, fmt){
+  const x = Number(v); if (!isFinite(x)) return null;
+  if (fmt === "decimal") return x > 1 ? x : null;
+  if (x >= 100) return 1 + x/100; if (x <= -100) return 1 + 100/Math.abs(x); return null;
+}
+function toAm(d){ if (!d || d <= 1) return null; return d >= 2 ? Math.round((d-1)*100) : Math.round(-100/(d-1)); }
+function buildCalcRows(){
+  const n = Number($("cN").value), fmt = $("cFmt").value, rows = $("cRows"); rows.replaceChildren();
+  const defaults = fmt === "american" ? ["+110","+105","+300"] : ["2.10","2.05","4.00"];
+  for (let i = 0; i < n; i++){
+    rows.append(h("div",{class:"metric"},
+      h("label",{}, "Outcome " + (i+1) + " odds", h("input",{id:"cO"+i,value:defaults[i],inputmode:"decimal"})),
+      h("label",{style:"margin-top:8px"}, "Commission on winnings (%)", h("input",{id:"cC"+i,type:"number",min:"0",max:"20",step:"0.1",value:"0",inputmode:"decimal"})),
+      h("label",{style:"margin-top:8px"}, "Max wager at this book ($, optional)", h("input",{id:"cL"+i,type:"number",min:"1",step:"1",placeholder:"unknown",inputmode:"decimal"}))));
+  }
+  rows.querySelectorAll("input").forEach(el => el.addEventListener("input", calc));
+  calc();
+}
+// Mirrors netlify/lib/arb.mjs stakePlan: never exceeds the bankroll or any max wager.
+function planStakes(legs, bank, limits){
+  const S = legs.reduce((a,l) => a + 1/l.net, 0);
+  let cap = Infinity;
+  legs.forEach((l,i) => { if (isFinite(limits[i])) cap = Math.min(cap, limits[i] / ((1/l.net)/S)); });
+  const eff = Math.min(bank, Math.floor(cap));
+  const stakes = legs.map((l,i) => Math.min(Math.floor(eff*(1/l.net)/S), isFinite(limits[i]) ? Math.floor(limits[i]) : Infinity));
+  let left = eff - stakes.reduce((a,b) => a+b, 0);
+  while (left >= 1){
+    let k = 0; for (let i = 1; i < legs.length; i++) if (stakes[i]*legs[i].net < stakes[k]*legs[k].net) k = i;
+    if (isFinite(limits[k]) && stakes[k] + 1 > limits[k]) break;
+    stakes[k]++; left--;
+  }
+  const total = stakes.reduce((a,b) => a+b, 0);
+  const profits = stakes.map((s,i) => Math.round((s*legs[i].net - total)*100)/100);
+  return { stakes, total, profits, limitBound: eff < bank };
+}
+function calc(){
+  const n = Number($("cN").value), fmt = $("cFmt").value, bank = Number($("cBank").value), out = $("cOut"), push = $("cPush").checked;
+  const legs = [], limits = [];
+  for (let i = 0; i < n; i++){
+    const d = toDec($("cO"+i).value, fmt), c = Number($("cC"+i).value)/100 || 0, lim = Number($("cL"+i).value);
+    if (!d) { out.textContent = "Outcome " + (i+1) + ": enter valid " + (fmt === "american" ? "American odds (≥ +100 or ≤ −100)" : "decimal odds (> 1.00)") + "."; return; }
+    legs.push({ gross: d, net: 1 + (d-1)*(1-c) });
+    limits.push(lim > 0 ? lim : Infinity);
+  }
+  if (!(bank > 0)) { out.textContent = "Enter a bankroll above $0."; return; }
+  const S = legs.reduce((s,l) => s + 1/l.net, 0), roi = 1/S - 1;
+  const P = planStakes(legs, bank, limits);
+  const worstDecisive = Math.min(...P.profits);
+  const worst = push ? Math.min(worstDecisive, 0) : worstDecisive;
+  let target = null;
+  if (S < 1){
+    let b = Math.ceil(500/roi);
+    for (let i = 0; i < 400; i++){
+      const t = planStakes(legs, b, limits);
+      if (t.limitBound && Math.min(...t.profits) < 500) { target = { unreachable: true, max: Math.min(...t.profits), plan: t }; break; }
+      if (Math.min(...t.profits) >= 500) { target = { plan: t }; break; }
+      b += Math.max(1, Math.ceil(b*0.0005));
+    }
+  }
+  const rest = legs.slice(0,-1).reduce((s,l) => s + 1/l.net, 0);
+  const thr = rest < 1 ? 1/(1-rest) : null;
+  const lines = [
+    "Decimal: " + legs.map(l => l.gross.toFixed(3)).join(" / ") + "  ·  American: " + legs.map(l => am(toAm(l.gross))).join(" / "),
+    "Combined implied probability (net of commission): " + (S*100).toFixed(2) + "%",
+    S < 1 ? "Arbitrage: YES — net ROI " + pct(roi) + (push ? " if decisive (a push returns $0)" : "") : "Arbitrage: NO — the book is " + ((S-1)*100).toFixed(2) + "% over 100%",
+    "Stakes for " + money0(bank) + ": " + P.stakes.map((s,i) => "Outcome " + (i+1) + " " + money0(s)).join(", ") + " (total " + money0(P.total) + (P.limitBound ? ", reduced to fit max wagers" : "") + ")",
+    "Profit if outcome wins: " + P.profits.map((p,i) => (i+1) + ": " + money(p)).join(" · ") + (push ? " · Push/tie: $0.00" : "") + " · Event voided: $0.00",
+    "Guaranteed minimum: " + money(worst),
+    target ? (target.unreachable
+      ? "$500 isn't reachable within the max wagers entered (best: " + money(target.max) + ")."
+      : "Capital for $500" + (push ? " if decisive" : " worst-case profit") + ": " + money0(target.plan.total) + " (" + target.plan.stakes.map((s,i) => (i+1) + ": " + money0(s)).join(", ") + ")" + (push ? " — not guaranteed, a push returns $0." : "")) : null,
+    thr ? "Outcome " + n + " needs better than " + am(toAm(thr)) + " (" + thr.toFixed(3) + " net) for an arbitrage given the other price(s)." : null,
+  ].filter(Boolean);
+  out.replaceChildren(...lines.map(t => h("div",{},t)));
+}
+["cN","cFmt"].forEach(id => $(id).addEventListener("change", buildCalcRows));
+$("cBank").addEventListener("input", calc);
+$("cPush").addEventListener("change", calc);
+buildCalcRows();
+
+boot().catch(() => { show("loading", false); show("signin", true); });
+</script>
+</body>
+</html>
