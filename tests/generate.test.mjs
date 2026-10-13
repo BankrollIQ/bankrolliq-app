@@ -59,3 +59,17 @@ test("generateAndStore writes latest + daily + index and records feed failures",
   assert.equal(pub.pricesStale, true);
   assert.equal(pub.marketIndex, undefined);
 });
+
+test("when every sport fails, the previous report is kept and flagged", async () => {
+  setDeployContext("deploy-preview");
+  const before = mem.get("arb-preview-reports/latest");
+  globalThis.fetch = async (url) => {
+    const u = new URL(url);
+    if (u.pathname === "/v4/sports/") return new Response(JSON.stringify(SPORTS), { status: 200 });
+    return new Response("quota exceeded", { status: 401 });
+  };
+  await assert.rejects(() => generateAndStore({ trigger: "manual", now: NOW }), /previous report kept/);
+  const after = mem.get("arb-preview-reports/latest");
+  assert.equal(after.generatedAt, before.generatedAt);
+  assert.match(after.feedProblem.message, /quota exceeded/);
+});

@@ -13,6 +13,17 @@ export async function generateAndStore({ trigger = "scheduled", now = new Date()
     throw new Error(`Estimated ${estimate} credits exceeds ARB_MAX_CREDITS_PER_RUN=${budget}; refusing to run.`);
   }
   const { results, usage } = await fetchAll(scan);
+  // If the feed failed for every sport (e.g. monthly credits used up), keep the last good report
+  // instead of publishing an empty one that looks like "no opportunities today".
+  if (scan.length && results.every((r) => !r.ok)) {
+    const reason = results[0]?.error || "unknown error";
+    const latest = await getJSON("reports", "latest");
+    if (latest) {
+      latest.feedProblem = { at: now.toISOString(), message: `Today's refresh failed for every sport: ${reason}` };
+      await setJSON("reports", "latest", latest);
+    }
+    throw new Error(`Odds feed failed for all sports; previous report kept. First error: ${reason}`);
+  }
   const report = buildReport(results, now, { trigger, coverage, usage, regions: regions() });
   report.creditsEstimated = estimate;
   const day = report.generatedAt.slice(0, 10);

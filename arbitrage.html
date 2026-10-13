@@ -288,6 +288,7 @@ function renderHead(R){
       h("span",{class:"badge " + (R.pricesStale ? "b-stale" : "b-verified")}, R.pricesStale ? "Prices stale" : "Fresh")),
     h("p",{class:"muted small"}, "Schedule: " + R.schedule.label + " · " + new Date(R.generatedAt).toISOString().replace("T"," ").slice(0,16) + " UTC · " + (R.trigger === "manual" ? "manual run" : "scheduled run") + " · regions " + (R.regions||"—")),
     R.staleNotice ? h("div",{class:"banner warn"}, R.staleNotice) : null,
+    R.feedProblem ? h("div",{class:"banner warn"}, "This is the last successful report. " + R.feedProblem.message + " (" + pt(R.feedProblem.at) + ")") : null,
     h("div",{class:"grid four",style:"margin-top:12px"},
       metric("Events scanned", R.stats.eventsScanned),
       metric("Markets compared", R.stats.marketsCompared),
