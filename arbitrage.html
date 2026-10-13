@@ -235,6 +235,7 @@ function pt(iso){
 }
 function ago(min){ if (min === null || min === undefined) return "unknown age"; if (min < 60) return Math.round(min) + " min ago"; return (min/60).toFixed(1) + " h ago"; }
 function appendAll(el, ...kids){ el.append(...kids.filter(k => k !== null && k !== undefined && k !== false)); }
+function mkt(x){ return x.lineLabel && !x.lineLabel.startsWith(x.marketLabel) ? x.marketLabel + ": " + x.lineLabel : (x.lineLabel || x.marketLabel); }
 function show(id, on){ $(id).classList.toggle("hidden", !on); }
 
 async function api(path, opts){
@@ -393,7 +394,7 @@ function renderCandidates(R){
         h("div",{},
           h("div",{class:"row"}, status, c.flags.pushPossible ? h("span",{class:"badge b-stale"},"Push possible — min $0") : null, c.flags.stale ? h("span",{class:"badge b-stale"},"Stale price") : null, c.flags.highRoi ? h("span",{class:"badge b-bad"},"Unusually high") : null),
           h("div",{class:"ev",style:"margin-top:8px"}, c.away + " @ " + c.home),
-          h("div",{class:"sub"}, c.sportTitle + " · " + c.marketLabel + " · " + c.lineLabel + " · starts " + pt(c.commence))),
+          h("div",{class:"sub"}, c.sportTitle + " · " + mkt(c) + " · starts " + pt(c.commence))),
         h("div",{}, h("div",{class:"roi"}, pct(c.roi)), h("div",{class:"sub",style:"text-align:right"},"net ROI"))),
       h("div",{class:"body"},
         legTable(c),
@@ -416,7 +417,7 @@ function renderNear(R){
   const rows = R.nearMisses.map(n => h("div",{class:"listRow"},
     h("div",{class:"listMain"},
       h("div",{class:"ev"}, n.away + " @ " + n.home),
-      h("div",{class:"sub"}, n.sportTitle + " · " + n.marketLabel + (n.lineLabel && n.lineLabel !== n.marketLabel ? ": " + n.lineLabel : "") + " · " + pt(n.commence)),
+      h("div",{class:"sub"}, n.sportTitle + " · " + mkt(n) + " · " + pt(n.commence)),
       h("div",{class:"sub"}, "Best: " + n.legs.map(l => l.outcome + " " + am(l.american) + " (" + l.bookTitle + ")").join(" · "))),
     h("div",{class:"listSide"},
       h("div",{class:"gap"}, ((n.impliedSum - 1) * 100).toFixed(2) + "%"),
