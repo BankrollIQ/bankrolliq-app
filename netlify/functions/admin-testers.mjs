@@ -7,7 +7,7 @@ import { init, json } from "../lib/http.mjs";
 export default async (req, context) => {
   init(context);
   if (await adminLocked(req, context)) return json({ error: "too_many_requests" }, 429);
-  if (!(await isAdmin(req, context))) return json({ error: "forbidden" }, 403);
+  if (!(await isAdmin(req))) return json({ error: "forbidden" }, 403);
   try {
     if (req.method === "POST") {
       const b = await req.json().catch(() => ({}));

@@ -113,3 +113,27 @@ export async function fetchAll(scan, { concurrency = 6 } = {}) {
   await Promise.all(Array.from({ length: Math.min(concurrency, scan.length) }, worker));
   return { results, usage: lastUsage };
 }
+
+// ---- Game Watch ----
+
+// Free endpoint: upcoming and live events for a sport (no odds).
+export async function listEvents(sportKey) {
+  const url = new URL(`${BASE}/sports/${encodeURIComponent(sportKey)}/events`);
+  url.searchParams.set("apiKey", apiKey());
+  url.searchParams.set("dateFormat", "iso");
+  const { data } = await getJson(url);
+  return data;
+}
+
+// One call for several events of the same sport. Cost = markets x regions (not per event).
+// Completed events are not returned by the feed.
+export async function fetchEventsOdds(sportKey, eventIds, { markets = "h2h", regionList } = {}) {
+  const url = new URL(`${BASE}/sports/${encodeURIComponent(sportKey)}/odds/`);
+  url.searchParams.set("apiKey", apiKey());
+  url.searchParams.set("regions", regionList || env("GAMEWATCH_REGIONS", "us,us2,us_ex"));
+  url.searchParams.set("markets", markets);
+  url.searchParams.set("oddsFormat", "decimal");
+  url.searchParams.set("dateFormat", "iso");
+  url.searchParams.set("eventIds", eventIds.join(","));
+  return getJson(url);
+}

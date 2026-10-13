@@ -88,3 +88,12 @@ Optional (defaults in brackets): `PRO_ALLOW_TRIALING` [true], `PRO_ACCESS_EMAILS
 * Testers sign in at `/arbitrage.html` with that email, like members, and see a "Tester access until …" banner.
 * **Feedback form** on the Arbitrage Daily page (members and testers). Each response is stored and emailed to `FEEDBACK_EMAIL` (set this in Netlify; the email uses the existing Resend settings). The admin page also lists all feedback.
 * Admin requests are limited to 30 per 15 minutes per IP.
+
+## My bets & Game Watch (beta)
+* **My bets** (Pro and testers): save a bet already placed (sport, game, team, stake, odds, book, target). The page shows the opposite-side price needed to break even and to lock the target, and the hedge stake. Two-way moneylines only (soccer excluded).
+* **Game Watch:** scheduled function `gamewatch-poll` runs every minute on the published site. From `GAMEWATCH_PREGAME_MINUTES` (60) before kick-off until the game ends, it makes **one Odds API call per sport** for all watched games (cost = number of regions, default 3: `us,us2,us_ex` — `us_ex` includes Kalshi, Polymarket, Novig, ProphetX, BetOpenly). Quotes older than 3 minutes are ignored.
+* When the best opposite price locks at least the member's target, it emails them once (Resend) with the hedge stake, book and locked amount, then stops watching that bet. Exchange fees that aren't configured are called out in the alert. NFL/fight ties are noted.
+* Limits: `GAMEWATCH_MAX_PER_USER` (5 active watches), `GAMEWATCH_MAX_CREDITS_PER_DAY` (1500 Odds API credits/day; polling pauses when reached).
+* Approximate Odds API cost: 3 credits per minute per sport with live watched games → ~630 credits for a 3.5-hour game (shared by everyone watching that sport).
+* Approximate Netlify cost: the every-minute check runs ~43,000 times a month; with no live watches it only reads one small record (roughly 10–30 credits/month).
+* Deploy Previews don't run schedules: `POST /api/gamewatch/run` with `x-admin-secret` runs one cycle on demand.

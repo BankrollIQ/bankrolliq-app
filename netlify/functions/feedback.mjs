@@ -32,7 +32,7 @@ export default async (req, context) => {
   init(context);
   if (req.method === "GET") {
     if (await adminLocked(req, context)) return json({ error: "too_many_requests" }, 429);
-    if (!(await isAdmin(req, context))) return json({ error: "forbidden" }, 403);
+    if (!(await isAdmin(req))) return json({ error: "forbidden" }, 403);
     return json({ feedback: (await getJSON("feedback", "index")) || [] });
   }
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
