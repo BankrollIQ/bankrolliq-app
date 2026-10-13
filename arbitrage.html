@@ -69,6 +69,13 @@ ul.notes{margin:8px 0;padding-left:18px;color:var(--muted);line-height:1.6;font-
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .hidden{display:none!important}
 .calcGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.listRow{display:flex;justify-content:space-between;gap:14px;padding:12px 0;border-bottom:1px solid var(--line)}
+.listRow:last-of-type{border-bottom:none}
+.listMain{min-width:0;flex:1}
+.listSide{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none;text-align:right}
+.gap{font-weight:900;color:var(--accent);font-variant-numeric:tabular-nums}
+.scrollHint{display:none;font-size:12px;color:var(--muted);margin-top:6px}
+@media(max-width:700px){.scrollHint{display:block}}
 .out{font-variant-numeric:tabular-nums}
 footer{display:flex;justify-content:space-between;gap:16px;color:var(--muted);border-top:1px solid var(--line);padding:28px 7%;font-size:14px;margin-top:30px}
 .disclaimer p{color:var(--muted);line-height:1.7;max-width:1100px}
@@ -327,7 +334,7 @@ function renderAlloc(R){
 }
 
 function legTable(c){
-  return h("div",{class:"tableWrap"}, h("table",{},
+  return h("div",{}, h("div",{class:"scrollHint"},"Swipe tables sideways to see every column →"), h("div",{class:"tableWrap"}, h("table",{},
     h("thead",{}, h("tr",{}, h("th",{},"Outcome"), h("th",{},"Bookmaker"), h("th",{class:"num"},"American"), h("th",{class:"num"},"Decimal"), h("th",{class:"num"},"Net after fee"), h("th",{},"Fee"), h("th",{},"Quoted at"), h("th",{},"Wager limit"))),
     h("tbody",{}, c.legs.map(l => h("tr",{},
       h("td",{}, l.outcome + (l.point !== null && l.point !== undefined && c.marketKey !== "h2h" ? " " + (l.point > 0 ? "+" : "") + l.point : "")),
@@ -335,7 +342,7 @@ function legTable(c){
       h("td",{class:"num"}, am(l.american)), h("td",{class:"num"}, dec(l.price)), h("td",{class:"num"}, dec(l.net)),
       h("td",{}, feeLabel(l)),
       h("td",{}, pt(l.lastUpdate) + " (" + ago(l.ageMinutes) + " at run)", l.stale ? h("span",{class:"badge b-stale",style:"margin-left:6px"},"stale") : null),
-      h("td",{}, l.limit ? money0(l.limit) + " (" + l.limitSource + ")" : "unknown"))))));
+      h("td",{}, l.limit ? money0(l.limit) + " (" + l.limitSource + ")" : "unknown")))))));
 }
 function feeLabel(l){
   const map = { "verified": "verified", "standard-no-commission": "no commission (standard, unverified)", "assumed": "assumed", "unknown": "UNKNOWN" };
@@ -405,25 +412,45 @@ function renderCandidates(R){
 function renderNear(R){
   const box = $("nearBox"); box.replaceChildren();
   if (!R.nearMisses.length){ box.append(h("p",{class:"muted"},"No near misses in this report.")); return; }
-  box.append(h("div",{class:"tableWrap"}, h("table",{},
-    h("thead",{}, h("tr",{}, h("th",{},"Event"), h("th",{},"Market"), h("th",{},"Best prices"), h("th",{class:"num"},"Gap to arb"), h("th",{}," "))),
-    h("tbody",{}, R.nearMisses.map(n => h("tr",{},
-      h("td",{}, n.away + " @ " + n.home, h("div",{class:"sub"}, n.sportTitle + " · " + pt(n.commence))),
-      h("td",{}, n.lineLabel),
-      h("td",{}, n.legs.map(l => l.outcome + " " + am(l.american) + " " + l.bookTitle).join(" · ")),
-      h("td",{class:"num"}, ((n.impliedSum - 1) * 100).toFixed(2) + "%"),
-      h("td",{}, h("button",{class:"smallBtn",type:"button",onclick:() => addWatch(n.id)},"Watch"))))))));
+  const SHOW = 15;
+  const rows = R.nearMisses.map(n => h("div",{class:"listRow"},
+    h("div",{class:"listMain"},
+      h("div",{class:"ev"}, n.away + " @ " + n.home),
+      h("div",{class:"sub"}, n.sportTitle + " · " + n.marketLabel + (n.lineLabel && n.lineLabel !== n.marketLabel ? ": " + n.lineLabel : "") + " · " + pt(n.commence)),
+      h("div",{class:"sub"}, "Best: " + n.legs.map(l => l.outcome + " " + am(l.american) + " (" + l.bookTitle + ")").join(" · "))),
+    h("div",{class:"listSide"},
+      h("div",{class:"gap"}, ((n.impliedSum - 1) * 100).toFixed(2) + "%"),
+      h("div",{class:"sub"},"from an arb"),
+      h("button",{class:"smallBtn",type:"button",onclick:() => addWatch(n.id)},"Watch"))));
+  rows.forEach((r,i) => { if (i >= SHOW) r.classList.add("hidden"); });
+  box.append(...rows);
+  if (rows.length > SHOW){
+    const more = h("button",{class:"smallBtn",type:"button",style:"margin-top:12px"},"Show all " + rows.length);
+    more.addEventListener("click", () => { rows.forEach(r => r.classList.remove("hidden")); more.remove(); });
+    box.append(more);
+  }
 }
 
 function renderCoverage(R){
   const box = $("coverageBox"); box.replaceChildren();
-  const label = { scanned: ["b-verified","Scanned"], inactive: ["b-stale","No events / off-season"], unsupported: ["b-bad","Unsupported"] };
-  box.append(h("div",{class:"tableWrap"}, h("table",{},
-    h("thead",{}, h("tr",{}, h("th",{},"Coverage group"), h("th",{},"Feed key"), h("th",{},"Status"), h("th",{},"Detail"))),
-    h("tbody",{}, R.coverage.map(c => h("tr",{},
-      h("td",{}, c.group), h("td",{class:"small"}, c.title || c.key),
-      h("td",{}, h("span",{class:"badge " + label[c.status][0]}, label[c.status][1])),
-      h("td",{class:"small"}, c.detail || ("markets: " + c.markets))))))),
+  const groups = [];
+  for (const c of R.coverage){
+    let g = groups.find(x => x.name === c.group);
+    if (!g){ g = { name: c.group, scanned: [], inactive: [], unsupported: [] }; groups.push(g); }
+    g[c.status].push(c);
+  }
+  const names = (arr) => arr.map(c => c.title || c.key).join(", ");
+  for (const g of groups){
+    const status = g.scanned.length ? ["b-verified","Scanned"] : g.inactive.length ? ["b-stale","Off-season"] : ["b-bad","Unsupported"];
+    const lines = [];
+    if (g.scanned.length) lines.push("Scanned: " + names(g.scanned) + (g.scanned[0].markets ? " (" + g.scanned[0].markets.replace(/h2h/g,"moneyline").replace(/,/g,", ") + ")" : ""));
+    if (g.inactive.length) lines.push(g.inactive.length > 3 ? g.inactive.length + " other tournaments/leagues off-season or with no events today" : "Off-season / no events: " + names(g.inactive));
+    if (g.unsupported.length) lines.push("Not supported by the feed: " + names(g.unsupported));
+    box.append(h("div",{class:"listRow"},
+      h("div",{class:"listMain"}, h("div",{class:"ev"}, g.name), ...lines.map(t => h("div",{class:"sub"}, t))),
+      h("div",{class:"listSide"}, h("span",{class:"badge " + status[0]}, status[1]))));
+  }
+  box.append(
     h("h4",{style:"margin:16px 0 4px"},"Not covered by this report"),
     h("ul",{class:"notes"}, R.knownUnsupported.map(u => h("li",{}, h("strong",{},u.label + ": "), u.reason))));
 }
