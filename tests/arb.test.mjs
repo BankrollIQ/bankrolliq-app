@@ -47,8 +47,9 @@ test("rounded stakes report honest worst case", () => {
 });
 
 test("capital for $500 target clears target after rounding", () => {
-  const plan = capitalForTarget(legs(2.05, 2.02), 500);
-  assert.ok(plan.worstCaseProfit >= 500);
+  const t = capitalForTarget(legs(2.05, 2.02), 500);
+  assert.ok(t.reachable && t.guaranteed);
+  assert.ok(t.plan.worstCaseProfit >= 500);
   assert.equal(capitalForTarget(legs(1.9, 1.9), 500), null);
 });
 
@@ -71,7 +72,7 @@ test("daily allocation never reuses an event-market and counts capital once", ()
     c("a", "e1", evaluateBook(legs(2.2, 2.2)).roi, [2.2, 2.2]),
     c("b", "e1", evaluateBook(legs(2.1, 2.1)).roi, [2.1, 2.1]),
     c("c", "e2", evaluateBook(legs(2.1, 2.1)).roi, [2.1, 2.1]),
-  ], { target: 500, defaultCap: 1000 });
+  ], { target: 500, capOf: () => ({ cap: 1000, source: "test cap" }) });
   const ids = res.positions.map((p) => p.candidateId);
   assert.ok(!ids.includes("b"));
   assert.equal(res.capitalRequired, res.positions.reduce((s, p) => s + p.totalStaked, 0));
@@ -109,12 +110,13 @@ test("report finds a cross-book arb, ranks by ROI, flags staleness and verificat
   assert.equal(top.status, "candidate"); // nothing operator-verified
   assert.ok(top.verificationGaps.length > 0);
   assert.equal(top.scenarios.length, 4);
-  assert.ok(top.target500.worstCaseProfit >= 500);
+  assert.ok(top.target500.reachable && top.target500.plan.worstCaseProfit >= 500);
   const second = r.candidates[1];
   assert.equal(second.flags.stale, true);
   assert.equal(second.eligible, false);
   assert.ok(!r.candidates.some((c) => c.eventId === "started"));
-  assert.ok(r.allocation.positions.every((p) => p.candidateId !== second.id));
+  assert.ok(r.allocations.theoretical.positions.every((p) => p.candidateId !== second.id));
+  assert.equal(r.allocations.verified.positions.length, 0);
 });
 
 test("spreads only match identical lines; quarter lines skipped", () => {

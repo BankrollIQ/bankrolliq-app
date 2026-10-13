@@ -62,7 +62,7 @@ export const DEFAULT_BOOK_FEES = {
 };
 
 // BOOK_TERMS_JSON example:
-// {"draftkings":{"commission":0,"feeVerified":true,"termsVerified":true,"maxStake":500,"notes":"Checked 2026-10-12"}}
+// {"draftkings":{"commission":0,"feeVerified":true,"termsVerified":true,"maxStake":500,"limitVerified":true,"notes":"Checked 2026-10-12"}}
 export function bookTerms(bookKey) {
   const overrides = envJson("BOOK_TERMS_JSON", {});
   const base = DEFAULT_BOOK_FEES[bookKey];
@@ -86,6 +86,7 @@ export function bookTerms(bookKey) {
     feeVerified: feeStatus === "verified",
     termsVerified: Boolean(o.termsVerified),
     maxStake: Number.isFinite(o.maxStake) ? o.maxStake : null,
+    limitVerified: Number.isFinite(o.maxStake) && o.limitVerified === true,
     notes: o.notes || null,
   };
 }

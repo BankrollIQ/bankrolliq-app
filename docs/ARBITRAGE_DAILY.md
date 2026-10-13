@@ -19,9 +19,24 @@ Included in the existing **BankrollIQ Pro** subscription. Page: `/arbitrage.html
 ### Candidate vs. verified
 A result is a **verified opportunity** only when, for every leg: the fee is operator-verified, settlement terms are operator-verified, the wager limit is known (from `BOOK_TERMS_JSON` or the feed's exchange bet limits) and covers the stake, no price is stale, no high-severity settlement difference applies, and the legs come from different books. Everything else is a **mathematical candidate**, with the open items listed on its card. Nothing is invented: if the feed has no arbitrage, the report says so.
 
+### Settlement states (`netlify/lib/settlement.mjs`)
+Every position is evaluated per state, each leg marked win / lose / refund:
+* **Core states** — each outcome wins; a whole-number spread or total lands exactly (push: every wager refunded, **$0**); an NFL two-way moneyline ties or a two-way fight line draws (refunded, **$0**). The "guaranteed minimum" is the lowest core-state profit, so any position that can push is shown with a $0 minimum and is never verified or allocated.
+* **Event voided** — cancellation: everything refunded, $0 (shown on every row).
+* **Rule mismatch** — the books disagree (tennis retirement, MLB pitcher change, fight draw graded as a loss): one leg voids while the other loses, or both lose. Shown separately as "rule-mismatch worst".
+
+### Stake rounding
+Stakes are whole dollars, rounded *down*, then leftover dollars go to the leg with the lowest payout. The total never exceeds the chosen bankroll, and no leg exceeds a known wager limit (two- and three-way). If a limit binds, the whole position shrinks so it stays hedged ("cut to limits").
+
 ### $500 calculations
-* **Per event:** smallest total bankroll whose *rounded* stakes give ≥ $500 worst-case net profit.
-* **Daily:** greedy by ROI over eligible candidates (fresh prices, known fees, no high-severity settlement risk, starts within 24 h), one position per event-market, capped at the verified limit or `ARB_DEFAULT_MAX_STAKE_PER_EVENT`. Capital is summed once — all events are unsettled at report time, so no stake is recycled. Deposits needed per bookmaker are shown.
+* **Per event:** smallest bankroll whose rounded stakes give ≥ $500 in every core state, within known limits. If a push is possible the plan is sized on decisive outcomes and labelled *not guaranteed* ($0 if it pushes). If limits make $500 impossible, the maximum within limits is shown instead.
+* **Daily — two separate plans:**
+  * **Verified plan:** only verified opportunities, each capped at operator-verified wager limits.
+  * **Theoretical plan:** all eligible candidates; each cap is labelled by source — operator-verified limits, known but unverified limits (feed-reported exchange limits or `maxStake` without `limitVerified`), or the assumed `ARB_DEFAULT_MAX_STAKE_PER_EVENT` cap. Assumed caps are never described as verified.
+  * Both: one position per event-market, positions with a $0 guaranteed minimum excluded, capital counted once (all events unsettled at report time), deposits listed per bookmaker.
+
+### Watch-list hypothetical targets
+For 1% and 2% ROI target prices on each side: the price, per-side stakes for a $1,000 bankroll, worst case, and the capital (with per-side stakes) for $500 — all labelled hypothetical, assuming no commission on that side and unknown limits.
 
 ## Services and costs (checked 12 Oct 2026 — confirm current prices)
 
@@ -51,7 +66,7 @@ Required:
 
 Optional (defaults in brackets): `PRO_ALLOW_TRIALING` [true], `PRO_ACCESS_EMAILS` (owner/testing access, comma-separated), `ARB_REGIONS` [us,us2], `ARB_EXTRA_SPORTS`, `ARB_STALE_QUOTE_MINUTES` [15], `ARB_REPORT_STALE_MINUTES` [30], `ARB_NEAR_MISS_MARGIN` [0.02], `ARB_DAILY_WINDOW_HOURS` [24], `ARB_DEFAULT_MAX_STAKE_PER_EVENT` [1000], `ARB_HIGH_ROI_WARNING` [0.05], `ARB_MAX_CREDITS_PER_RUN` [400], `ARB_LIVE_REFRESH_MINUTES` [10],
 `BOOK_TERMS_JSON` — operator-confirmed fees, terms and limits, e.g.
-`{"draftkings":{"commission":0,"feeVerified":true,"termsVerified":true,"maxStake":500,"notes":"Checked 2026-10-12"}}`.
+`{"draftkings":{"commission":0,"feeVerified":true,"termsVerified":true,"maxStake":500,"limitVerified":true,"notes":"Checked 2026-10-12"}}`. A `maxStake` only counts as verified with `"limitVerified": true`.
 
 ## Verifying on a Deploy Preview
 1. Push branch `feature/arbitrage-daily` and open a pull request — Netlify builds a Deploy Preview.

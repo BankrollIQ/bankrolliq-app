@@ -47,32 +47,97 @@ export function exactStakes(legs, bankroll) {
   return legs.map((l) => (bankroll * (1 / l.netDecimal)) / impliedSum);
 }
 
-// Stakes rounded to `step` dollars (default $1), with honest worst/best-case profit after rounding.
-export function roundedStakePlan(legs, bankroll, step = 1) {
-  const exact = exactStakes(legs, bankroll);
-  const stakes = exact.map((s) => Math.max(step, Math.round(s / step) * step));
+// Largest total bankroll whose exact (unrounded) shares fit inside every known per-leg limit.
+// Unknown limits (null/undefined) are treated as unlimited here; callers decide how to label that.
+export function capacityFromLimits(legs, limits = []) {
+  const { impliedSum } = evaluateBook(legs);
+  let cap = Infinity;
+  legs.forEach((l, i) => {
+    const lim = limits[i];
+    if (Number.isFinite(lim)) cap = Math.min(cap, lim / ((1 / l.netDecimal) / impliedSum));
+  });
+  return cap;
+}
+
+// Rounded stakes that NEVER exceed the bankroll or any per-leg limit.
+// 1) shrink the bankroll to what the limits allow, 2) floor every stake to `step`,
+// 3) hand out leftover dollars one step at a time to the leg with the lowest payout,
+//    stopping when that leg is at its limit (adding elsewhere would only lower the worst case).
+// Profit is reported for every settlement state (see settlement.mjs), including pushes and voids.
+export function stakePlan(legs, bankroll, { step = 1, limits = [], states = null } = {}) {
+  const st = states || { core: legs.map((_, k) => ({ kind: "outcome", label: `Outcome ${k + 1} wins`, results: legs.map((__, i) => (i === k ? "win" : "lose")) })), voidAll: null, mismatch: [] };
+  const lims = legs.map((_, i) => (Number.isFinite(limits[i]) ? Math.floor(limits[i] / step) * step : Infinity));
+  const effective = Math.min(bankroll, Math.floor(capacityFromLimits(legs, limits) / step) * step);
+  const exact = effective > 0 ? exactStakes(legs, effective) : legs.map(() => 0);
+  const stakes = exact.map((e, i) => Math.min(Math.floor(e / step) * step, lims[i]));
+  let left = effective - stakes.reduce((a, b) => a + b, 0);
+  while (left >= step) {
+    let k = 0;
+    for (let i = 1; i < legs.length; i++) if (stakes[i] * legs[i].netDecimal < stakes[k] * legs[k].netDecimal) k = i;
+    if (stakes[k] + step > lims[k]) break;
+    stakes[k] += step;
+    left -= step;
+  }
   const total = stakes.reduce((a, b) => a + b, 0);
-  const payouts = stakes.map((s, i) => s * legs[i].netDecimal);
-  const profits = payouts.map((p) => p - total);
+  const profitOf = (s) => ({ kind: s.kind, label: s.label, profit: stateProfitLocal(stakes, legs, s.results) });
+  const core = st.core.map(profitOf);
+  const mismatch = (st.mismatch || []).map(profitOf);
+  const coreProfits = core.map((c) => c.profit);
   return {
     bankroll,
     stakes,
     totalStaked: round2(total),
-    payouts: payouts.map(round2),
-    worstCaseProfit: round2(Math.min(...profits)),
-    bestCaseProfit: round2(Math.max(...profits)),
+    limitBound: effective < bankroll,
+    hedged: stakes.every((s) => s > 0),
+    payouts: stakes.map((s, i) => round2(s * legs[i].netDecimal)),
+    states: core,
+    voidAll: st.voidAll ? profitOf(st.voidAll) : null,
+    mismatchStates: mismatch,
+    pushPossible: core.some((c) => c.kind === "push"),
+    worstCaseProfit: round2(Math.min(...coreProfits)),
+    bestCaseProfit: round2(Math.max(...coreProfits)),
+    mismatchWorstProfit: mismatch.length ? round2(Math.min(...mismatch.map((m) => m.profit))) : null,
   };
 }
 
-// Capital needed so the worst-case (rounded) profit reaches `target`.
-export function capitalForTarget(legs, target = TARGET_PROFIT, step = 1) {
+function stateProfitLocal(stakes, legs, results) {
+  let p = 0;
+  results.forEach((r, i) => {
+    if (r === "win") p += stakes[i] * (legs[i].netDecimal - 1);
+    else if (r === "lose") p -= stakes[i];
+  });
+  return round2(p);
+}
+
+// Back-compat name used by older callers/tests.
+export function roundedStakePlan(legs, bankroll, step = 1) {
+  return stakePlan(legs, bankroll, { step });
+}
+
+// Capital needed for `target` profit.
+// guaranteed=true only when every core state (incl. pushes) pays >= target. When a push/tie is possible
+// the guaranteed minimum is $0, so the plan is sized on decisive outcomes and marked guaranteed=false.
+export function capitalForTarget(legs, target = TARGET_PROFIT, { step = 1, limits = [], states = null } = {}) {
   const { roi, isArb } = evaluateBook(legs);
   if (!isArb || roi <= 0) return null;
+  const decisive = states ? { ...states, core: states.core.filter((s) => s.kind === "outcome") } : null;
+  const capacity = capacityFromLimits(legs, limits);
   let bankroll = Math.ceil(target / roi / step) * step;
-  // Rounding can shave a few cents; step up until the worst case clears the target.
-  for (let i = 0; i < 200; i++) {
-    const plan = roundedStakePlan(legs, bankroll, step);
-    if (plan.worstCaseProfit >= target) return plan;
+  for (let i = 0; i < 400; i++) {
+    if (bankroll > capacity) {
+      const atCap = stakePlan(legs, Math.floor(capacity / step) * step, { step, limits, states });
+      return { reachable: false, reason: "wager-limits", maxProfitWithinLimits: decisive ? stakePlan(legs, atCap.bankroll, { step, limits, states: decisive }).worstCaseProfit : atCap.worstCaseProfit, plan: atCap };
+    }
+    const sized = stakePlan(legs, bankroll, { step, limits, states: decisive || states });
+    if (sized.worstCaseProfit >= target) {
+      const full = stakePlan(legs, bankroll, { step, limits, states });
+      return {
+        reachable: true,
+        guaranteed: full.worstCaseProfit >= target,
+        basis: full.pushPossible ? "decisive-outcomes-only" : "all-settlement-states",
+        plan: full,
+      };
+    }
     bankroll += step * Math.max(1, Math.ceil(bankroll * 0.0005));
   }
   return null;
@@ -112,13 +177,12 @@ export function maxBankrollFromLimits(legs, limits) {
 
 // ---------- daily allocation ----------
 
-// Greedy allocation toward a daily profit target. Every dollar is counted once:
-// all included events are unsettled when the report is generated, so capital is not recycled.
-// candidates: [{ id, eventId, marketKey, legs, roi, capacity, eligible }]
-export function allocateDaily(candidates, { target = TARGET_PROFIT, defaultCap = 1000, step = 1 } = {}) {
-  const pool = candidates
-    .filter((c) => c.eligible && c.roi > 0)
-    .sort((a, b) => b.roi - a.roi);
+// Greedy allocation toward a daily profit target. Every dollar is counted once: all included
+// events are unsettled at report time, so capital is not recycled.
+// candidates: [{ id, eventId, marketKey, legs, roi, limits, states }]
+// capOf(c) → { cap, source } where source describes where the per-event cap came from.
+export function allocateDaily(candidates, { target = TARGET_PROFIT, capOf, step = 1 } = {}) {
+  const pool = [...candidates].filter((c) => c.roi > 0).sort((a, b) => b.roi - a.roi);
   const usedEventMarket = new Set();
   const positions = [];
   let profit = 0;
@@ -127,14 +191,13 @@ export function allocateDaily(candidates, { target = TARGET_PROFIT, defaultCap =
     if (profit >= target) break;
     const key = `${c.eventId}|${c.marketKey}`;
     if (usedEventMarket.has(key)) continue;
-    const cap = c.capacity ?? defaultCap;
+    const { cap, source } = capOf(c);
+    if (!(cap > 0)) continue;
     const needed = Math.ceil((target - profit) / c.roi / step) * step;
-    const bankroll = Math.min(cap, needed);
-    if (bankroll < step * c.legs.length) continue;
-    const plan = roundedStakePlan(c.legs, bankroll, step);
-    if (plan.worstCaseProfit <= 0) continue;
+    const plan = stakePlan(c.legs, Math.min(cap, needed), { step, limits: c.limits || [], states: c.states });
+    if (!plan.hedged || plan.worstCaseProfit <= 0) continue; // pushes ($0) never count toward a target
     usedEventMarket.add(key);
-    positions.push({ candidateId: c.id, capacitySource: c.capacity ? "verified-limit" : "default-cap", ...plan });
+    positions.push({ candidateId: c.id, capSource: source, cap, ...plan });
     profit += plan.worstCaseProfit;
     capital += plan.totalStaked;
   }

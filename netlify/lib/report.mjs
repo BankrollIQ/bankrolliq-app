@@ -1,8 +1,9 @@
 // Turns raw Odds API events into the Arbitrage Daily report. Pure: no network or storage.
 import {
-  SCENARIO_BANKROLLS, TARGET_PROFIT, allocateDaily, capitalForTarget, decimalToAmerican,
-  evaluateBook, maxBankrollFromLimits, netDecimal, round2, roundedStakePlan, thresholdForOutcome,
+  SCENARIO_BANKROLLS, TARGET_PROFIT, allocateDaily, capacityFromLimits, capitalForTarget, decimalToAmerican,
+  evaluateBook, hypotheticalPriceForRoi, netDecimal, round2, stakePlan, thresholdForOutcome,
 } from "./arb.mjs";
+import { settlementStates } from "./settlement.mjs";
 import { bookTerms, envNumber, scheduleInfo, settlementNotes, KNOWN_UNSUPPORTED } from "./config.mjs";
 
 export const REPORT_VERSION = 1;
@@ -64,7 +65,7 @@ export function groupEventMarkets(event, generatedAt, opts = {}) {
         g.outcomes[i].quotes.push({
           book: bk.key, bookTitle: bk.title, price: o.price, american: decimalToAmerican(o.price), net,
           commission: terms.commission, feeStatus: terms.feeStatus, feeVerified: terms.feeVerified,
-          termsVerified: terms.termsVerified, maxStake: terms.maxStake,
+          termsVerified: terms.termsVerified, maxStake: terms.maxStake, limitVerified: terms.limitVerified,
           betLimit: Number.isFinite(o.bet_limit) ? o.bet_limit : null,
           lastUpdate, ageMinutes: ageMin === null ? null : round2(ageMin),
           stale: ageMin === null || ageMin * 60000 > staleMs,
@@ -140,25 +141,7 @@ export function buildReport(results, generatedAt = new Date(), meta = {}) {
   candidates.sort((a, b) => b.roi - a.roi);
   nearMisses.sort((a, b) => a.impliedSum - b.impliedSum);
 
-  const allocation = allocateDaily(
-    candidates.map((c) => ({ ...c, capacity: c.capacity })),
-    { target: TARGET_PROFIT, defaultCap: opts.defaultCap },
-  );
-  const byId = new Map(candidates.map((c) => [c.id, c]));
-  const deposits = {};
-  for (const p of allocation.positions) {
-    const c = byId.get(p.candidateId);
-    p.event = `${c.away} @ ${c.home}`;
-    p.lineLabel = c.lineLabel;
-    p.status = c.status;
-    p.legs = c.legs.map((l, i) => ({ book: l.bookTitle, outcome: l.outcome, stake: p.stakes[i] }));
-    for (const l of p.legs) deposits[l.book] = (deposits[l.book] || 0) + l.stake;
-  }
-  allocation.depositsByBook = deposits;
-  allocation.defaultCapPerEvent = opts.defaultCap;
-  allocation.note = "Capital is counted once: every included event is unsettled at report time, so no stake is assumed to be recycled into a later bet the same day.";
-  allocation.allVerified = allocation.positions.length > 0 && allocation.positions.every((p) => p.status === "verified");
-
+  const allocations = buildAllocations(candidates, opts);
   return {
     version: REPORT_VERSION,
     generatedAt: generatedAt.toISOString(),
@@ -178,50 +161,105 @@ export function buildReport(results, generatedAt = new Date(), meta = {}) {
     },
     candidates,
     nearMisses: nearMisses.slice(0, 50),
-    allocation,
+    allocations,
     marketIndex,
   };
+}
+
+// Per-leg wager limit and where it came from. The smaller known value wins.
+export function legLimit(l) {
+  const opts = [];
+  if (Number.isFinite(l.maxStake)) opts.push({ value: l.maxStake, source: l.limitVerified ? "operator-verified" : "operator-entered (unverified)" });
+  if (Number.isFinite(l.betLimit)) opts.push({ value: l.betLimit, source: "feed-reported (unverified)" });
+  if (!opts.length) return { value: null, source: "unknown", verified: false };
+  const min = opts.reduce((a, b) => (b.value < a.value ? b : a));
+  return { value: min.value, source: min.source, verified: min.source === "operator-verified" };
+}
+
+function finiteOrNull(n) {
+  return Number.isFinite(n) ? Math.floor(n) : null;
 }
 
 function enrichCandidate(c, generatedAt, opts) {
   const gaps = [];
   const settlement = settlementNotes(c.sportKey, c.marketKey, c.legs.length);
+  const states = settlementStates(c.sportKey, c.marketKey, c.legs);
   const stale = c.legs.some((l) => l.stale);
   const unknownFee = c.legs.some((l) => l.feeStatus === "unknown");
   const sameBook = new Set(c.legs.map((l) => l.book)).size < c.legs.length;
+  const pushPossible = states.core.some((s) => s.kind === "push");
+  const legLimits = c.legs.map(legLimit);
+  const limits = legLimits.map((x) => x.value);
+  const capacity = finiteOrNull(capacityFromLimits(c.legs, limits));
+  const capacityVerified = legLimits.every((x) => x.verified) ? capacity : null;
+
   if (stale) gaps.push(`At least one price was more than ${opts.staleQuoteMinutes} min old when the report ran.`);
   if (unknownFee) gaps.push("Commission is unknown for at least one exchange; net ROI may be overstated.");
   if (c.legs.some((l) => !l.feeVerified)) gaps.push("Fees not operator-verified for every book.");
   if (c.legs.some((l) => !l.termsVerified)) gaps.push("Settlement terms not operator-verified for every book.");
-  const limits = c.legs.map((l) => {
-    const vals = [l.maxStake, l.betLimit].filter((v) => Number.isFinite(v));
-    return vals.length ? Math.min(...vals) : null;
-  });
-  const capacity = maxBankrollFromLimits(c.legs, limits);
-  if (capacity === null) gaps.push("Available wager size not known for every leg.");
-  if (settlement.some((n) => n.severity === "high")) gaps.push("Settlement rules can differ in a way that breaks the hedge (see notes).");
+  if (!legLimits.every((x) => x.verified)) gaps.push("Available wager size not operator-verified for every leg.");
+  if (pushPossible) gaps.push("A push / tie refunds every wager, so the guaranteed minimum profit is $0.");
+  if (settlement.some((n) => n.severity === "high")) gaps.push("Settlement rules can differ in a way that breaks the hedge (see rule-mismatch outcomes).");
   if (sameBook) gaps.push("Best prices come from the same bookmaker — likely a pricing error that may be voided.");
   const highRoi = c.roi >= opts.highRoi;
   if (highRoi) gaps.push(`ROI ≥ ${opts.highRoi * 100}% is unusual and often a stale or erroneous price that books may void.`);
 
   const status = gaps.length === 0 ? "verified" : "candidate";
-  const scenarios = SCENARIO_BANKROLLS.map((b) => ({
-    ...roundedStakePlan(c.legs, b),
-    exceedsVerifiedCapacity: capacity !== null && b > capacity,
-  }));
-  const target = capitalForTarget(c.legs, TARGET_PROFIT);
+  const scenarios = SCENARIO_BANKROLLS.map((b) => stakePlan(c.legs, b, { limits, states }));
+  const target500 = capitalForTarget(c.legs, TARGET_PROFIT, { limits, states });
   const hoursToStart = (new Date(c.commence) - generatedAt) / 3600000;
   return {
     ...c,
-    legs: c.legs.map((l, i) => ({ ...l, limit: limits[i] })),
+    legs: c.legs.map((l, i) => ({ ...l, limit: legLimits[i].value, limitSource: legLimits[i].source })),
+    limits,
+    states,
     status,
     verificationGaps: gaps,
-    flags: { stale, unknownFee, sameBook, highRoi },
+    flags: { stale, unknownFee, sameBook, highRoi, pushPossible },
     settlement,
     capacity,
+    capacityVerified,
     scenarios,
-    target500: target ? { ...target, exceedsVerifiedCapacity: capacity !== null && target.bankroll > capacity } : null,
-    eligible: !stale && !unknownFee && !sameBook && !settlement.some((n) => n.severity === "high") && hoursToStart <= opts.windowHours,
+    target500,
+    eligible: !stale && !unknownFee && !sameBook && !pushPossible && !settlement.some((n) => n.severity === "high") && hoursToStart <= opts.windowHours,
+  };
+}
+
+function describePositions(alloc, byId) {
+  const deposits = {};
+  for (const p of alloc.positions) {
+    const c = byId.get(p.candidateId);
+    p.event = `${c.away} @ ${c.home}`;
+    p.lineLabel = c.lineLabel;
+    p.status = c.status;
+    p.legs = c.legs.map((l, i) => ({ book: l.bookTitle, outcome: l.outcome, stake: p.stakes[i] }));
+    for (const l of p.legs) deposits[l.book] = (deposits[l.book] || 0) + l.stake;
+  }
+  alloc.depositsByBook = deposits;
+  return alloc;
+}
+
+// Two separate plans. "verified" uses only verified opportunities sized within operator-verified limits.
+// "theoretical" also uses unverified candidates; its caps are labelled by source and never called verified.
+export function buildAllocations(candidates, opts) {
+  const byId = new Map(candidates.map((c) => [c.id, c]));
+  const verified = describePositions(allocateDaily(
+    candidates.filter((c) => c.status === "verified" && c.eligible && c.capacityVerified),
+    { target: TARGET_PROFIT, capOf: (c) => ({ cap: c.capacityVerified, source: "operator-verified wager limits" }) },
+  ), byId);
+  const theoretical = describePositions(allocateDaily(
+    candidates.filter((c) => c.eligible),
+    {
+      target: TARGET_PROFIT,
+      capOf: (c) => c.capacityVerified ? { cap: c.capacityVerified, source: "operator-verified wager limits" }
+        : c.capacity ? { cap: c.capacity, source: "known but unverified wager limits" }
+        : { cap: opts.defaultCap, source: `assumed $${opts.defaultCap} cap — limits unknown, not verified` },
+    },
+  ), byId);
+  const note = "Capital is counted once: every included event is unsettled at report time, so no stake is assumed to be recycled into a later bet the same day. Positions where a push or tie is possible are excluded because their guaranteed profit is $0.";
+  return {
+    verified: { ...verified, label: "Verified plan", note },
+    theoretical: { ...theoretical, label: "Theoretical plan (unverified fees, terms or wager sizes)", note, defaultCapPerEvent: opts.defaultCap },
   };
 }
 
@@ -235,12 +273,7 @@ export function watchView(entry, now = new Date(), staleMinutes = 15) {
     outcomes: entry.outcomes.map((o, i) => {
       const others = nets.filter((_, j) => j !== i);
       const threshold = thresholdForOutcome(others);
-      const hyp = [0.01, 0.02].map((r) => {
-        const rest = others.reduce((s, d) => s + 1 / d, 0);
-        const need = 1 / (1 + r) - rest;
-        const d = need > 0 ? 1 / need : null;
-        return { targetRoiPct: r * 100, decimal: d && round2(d * 1000) / 1000, american: d && decimalToAmerican(d), label: "HYPOTHETICAL — not a quoted price" };
-      });
+      const hyp = [0.01, 0.02].map((r) => hypotheticalTarget(entry, i, nets, r));
       const age = o.best.lastUpdate ? (now - new Date(o.best.lastUpdate)) / 60000 : null;
       return {
         ...o,
@@ -254,5 +287,39 @@ export function watchView(entry, now = new Date(), staleMinutes = 15) {
         hypotheticalTargets: hyp,
       };
     }),
+  };
+}
+
+// A HYPOTHETICAL price for outcome i that would produce `targetRoi` against the current best prices on the
+// other side(s), with the stakes and capital that price would imply. Assumes no commission on the
+// hypothetical side and unknown wager limits. Never presented as a quote.
+export function hypotheticalTarget(entry, i, nets, targetRoi, bankroll = 1000) {
+  const others = nets.filter((_, j) => j !== i);
+  const d = hypotheticalPriceForRoi(others, targetRoi);
+  const base = { targetRoiPct: targetRoi * 100, label: "HYPOTHETICAL — not a quoted price" };
+  if (!d) return { ...base, decimal: null, american: null };
+  const legs = entry.outcomes.map((o, j) => ({ outcome: o.name, point: o.point, netDecimal: j === i ? d : nets[j], book: j === i ? "hypothetical" : o.best.book }));
+  const states = settlementStates(entry.sportKey || "", entry.marketKey || "", legs);
+  const example = stakePlan(legs, bankroll, { states });
+  const target = capitalForTarget(legs, TARGET_PROFIT, { states });
+  return {
+    ...base,
+    decimal: round2(d * 1000) / 1000,
+    american: decimalToAmerican(d),
+    example: {
+      bankroll,
+      stakes: legs.map((l, j) => ({ outcome: l.outcome, book: j === i ? "hypothetical price" : entry.outcomes[j].best.bookTitle || l.book, stake: example.stakes[j] })),
+      totalStaked: example.totalStaked,
+      worstCaseProfit: example.worstCaseProfit,
+      pushPossible: example.pushPossible,
+    },
+    capitalFor500: target && target.reachable ? {
+      capital: target.plan.totalStaked,
+      stakes: target.plan.stakes,
+      worstCaseProfit: target.plan.worstCaseProfit,
+      guaranteed: target.guaranteed,
+      basis: target.basis,
+    } : null,
+    limitsNote: "Wager limits unknown — sizes assume every book accepts these stakes.",
   };
 }

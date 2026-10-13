@@ -125,7 +125,7 @@ footer{display:flex;justify-content:space-between;gap:16px;color:var(--muted);bo
   <section class="section" id="allocation">
     <div class="sectionHeader">
       <h2>$500 daily target — feasibility</h2>
-      <p>A separate check of whether today's eligible candidates could reach $500 combined worst-case profit. Each dollar is counted once: every event is unsettled when the report runs, so no stake is assumed to be freed up and reused the same day.</p>
+      <p>Two separate checks of whether today's candidates could reach $500 combined worst-case profit. The <strong>verified plan</strong> uses only opportunities whose fees, terms and wager limits were confirmed, sized within those limits. The <strong>theoretical plan</strong> also uses unverified candidates and is a calculation, not a plan to act on. Each dollar is counted once, and positions where a push or tie returns $0 are left out.</p>
     </div>
     <div id="allocBox" class="card"></div>
   </section>
@@ -179,6 +179,7 @@ footer{display:flex;justify-content:space-between;gap:16px;color:var(--muted);bo
       <label style="max-width:220px">Total bankroll ($)
         <input id="cBank" type="number" min="1" step="1" value="1000" inputmode="decimal"/>
       </label>
+      <label style="display:flex;gap:8px;align-items:center;max-width:340px;align-self:end;padding-bottom:12px"><input id="cPush" type="checkbox" style="width:auto;margin:0"/> Push / tie possible (whole-number line, NFL tie, fight draw)</label>
     </div>
     <div id="cRows" class="calcGrid"></div>
     <div id="cOut" class="banner info out" aria-live="polite"></div>
@@ -291,30 +292,38 @@ function renderHead(R){
 function metric(label, value){ return h("div",{class:"metric"}, h("span",{},label), h("strong",{}, String(value))); }
 
 function renderAlloc(R){
-  const A = R.allocation, box = $("allocBox"); box.replaceChildren();
-  if (!A.positions.length){
-    box.append(h("p",{class:"muted"},"No eligible candidates today, so a $500 daily allocation isn't possible from this report. Candidates are excluded when a price was stale, a fee is unknown, settlement rules can break the hedge, or the event starts more than " + R.settings.windowHours + " h after the report."));
-    return;
+  const box = $("allocBox"); box.replaceChildren();
+  const A = R.allocations || {};
+  for (const key of ["verified","theoretical"]){
+    const P = A[key]; if (!P) continue;
+    const isV = key === "verified";
+    const wrap = h("div",{style:"padding:6px 0 18px;border-bottom:1px solid var(--line);margin-bottom:14px"},
+      h("div",{class:"row",style:"justify-content:space-between"},
+        h("h3",{style:"margin:0"}, P.label),
+        h("span",{class:"badge " + (isV ? "b-verified" : "b-candidate")}, isV ? "Verified inputs only" : "Unverified — calculation only")));
+    if (!P.positions.length){
+      wrap.append(h("p",{class:"muted"}, isV
+        ? "No verified opportunities today, so there is no verified plan. Add confirmed fees, terms and wager limits per bookmaker (BOOK_TERMS_JSON) to make verification possible."
+        : "No eligible candidates today. Candidates are left out when a price was stale, a fee is unknown, a push/tie is possible, settlement rules can break the hedge, or the event starts more than " + R.settings.windowHours + " h after the report."));
+      box.append(wrap); continue;
+    }
+    wrap.append(
+      h("div",{class:"grid four",style:"margin-top:12px"},
+        metric("Target", money0(P.target)),
+        metric("Worst-case profit", money(P.projectedWorstCaseProfit)),
+        metric("Capital required", money(P.capitalRequired)),
+        metric(P.feasible ? "Reachable on paper" : "Not reachable", P.positions.length + " position" + (P.positions.length === 1 ? "" : "s"))),
+      h("div",{class:"tableWrap"}, h("table",{},
+        h("thead",{}, h("tr",{}, h("th",{},"Event"), h("th",{},"Market"), h("th",{},"Stakes"), h("th",{},"Per-event cap"), h("th",{class:"num"},"Capital"), h("th",{class:"num"},"Worst-case profit"))),
+        h("tbody",{}, P.positions.map(p => h("tr",{},
+          h("td",{}, p.event), h("td",{}, p.lineLabel),
+          h("td",{}, p.legs.map(l => money0(l.stake) + " " + l.outcome + " @ " + l.book).join(" · ")),
+          h("td",{class:"small"}, money0(p.cap) + " — " + p.capSource),
+          h("td",{class:"num"}, money(p.totalStaked)), h("td",{class:"num"}, money(p.worstCaseProfit))))))),
+      h("p",{class:"muted small"}, "Deposits needed by bookmaker: " + Object.entries(P.depositsByBook).map(([b,v]) => b + " " + money0(v)).join(" · ")),
+      h("p",{class:"muted small"}, P.note));
+    box.append(wrap);
   }
-  box.append(
-    h("div",{class:"row",style:"justify-content:space-between"},
-      h("h3",{style:"margin:0"}, A.feasible ? "Target reachable on paper" : "Target not reachable with today's candidates"),
-      h("span",{class:"badge " + (A.allVerified ? "b-verified" : "b-candidate")}, A.allVerified ? "All verified" : "Includes unverified candidates")),
-    h("div",{class:"grid four",style:"margin-top:12px"},
-      metric("Target", money0(A.target)),
-      metric("Worst-case profit", money(A.projectedWorstCaseProfit)),
-      metric("Capital required", money(A.capitalRequired)),
-      metric("Positions", A.positions.length)),
-    h("p",{class:"muted small"}, A.note + " Per-event stake is capped at the verified wager limit, or " + money0(A.defaultCapPerEvent) + " (an assumed cap) where limits are unknown."),
-    h("div",{class:"tableWrap"}, h("table",{},
-      h("thead",{}, h("tr",{}, h("th",{},"Event"), h("th",{},"Market"), h("th",{},"Stakes"), h("th",{class:"num"},"Capital"), h("th",{class:"num"},"Worst-case profit"))),
-      h("tbody",{}, A.positions.map(p => h("tr",{},
-        h("td",{}, p.event), h("td",{}, p.lineLabel),
-        h("td",{}, p.legs.map(l => money0(l.stake) + " " + l.outcome + " @ " + l.book).join(" · ")),
-        h("td",{class:"num"}, money(p.totalStaked)), h("td",{class:"num"}, money(p.worstCaseProfit))))))),
-    h("h4",{style:"margin:16px 0 6px"},"Deposits needed by bookmaker"),
-    h("p",{class:"muted"}, Object.entries(A.depositsByBook).map(([b,v]) => b + ": " + money0(v)).join(" · "))
-  );
 }
 
 function legTable(c){
@@ -326,7 +335,7 @@ function legTable(c){
       h("td",{class:"num"}, am(l.american)), h("td",{class:"num"}, dec(l.price)), h("td",{class:"num"}, dec(l.net)),
       h("td",{}, feeLabel(l)),
       h("td",{}, pt(l.lastUpdate) + " (" + ago(l.ageMinutes) + " at run)", l.stale ? h("span",{class:"badge b-stale",style:"margin-left:6px"},"stale") : null),
-      h("td",{}, l.limit ? money0(l.limit) : "unknown"))))));
+      h("td",{}, l.limit ? money0(l.limit) + " (" + l.limitSource + ")" : "unknown"))))));
 }
 function feeLabel(l){
   const map = { "verified": "verified", "standard-no-commission": "no commission (standard, unverified)", "assumed": "assumed", "unknown": "UNKNOWN" };
@@ -334,13 +343,34 @@ function feeLabel(l){
 }
 
 function scenarioTable(c){
+  const stateLabels = c.scenarios[0].states.map(x => x.label);
+  const mm = c.scenarios[0].mismatchStates.length > 0;
   return h("div",{class:"tableWrap"}, h("table",{},
-    h("thead",{}, h("tr",{}, h("th",{},"Total bankroll"), ...c.legs.map(l => h("th",{class:"num"}, "Stake: " + l.outcome + " (" + l.bookTitle + ")")), h("th",{class:"num"},"Total staked"), h("th",{class:"num"},"Net profit (worst / best)"))),
+    h("thead",{}, h("tr",{},
+      h("th",{},"Bankroll"),
+      ...c.legs.map(l => h("th",{class:"num"}, "Stake: " + l.outcome + " (" + l.bookTitle + ")")),
+      h("th",{class:"num"},"Total staked"),
+      ...stateLabels.map(lbl => h("th",{class:"num"}, "If " + lbl)),
+      h("th",{class:"num"},"Event voided"),
+      h("th",{class:"num"},"Guaranteed min."),
+      mm ? h("th",{class:"num"},"Rule-mismatch worst") : null)),
     h("tbody",{}, c.scenarios.map(s => h("tr",{},
-      h("td",{}, money0(s.bankroll), s.exceedsVerifiedCapacity ? h("span",{class:"badge b-bad",style:"margin-left:6px"},"over limit") : null),
+      h("td",{}, money0(s.bankroll), s.limitBound ? h("span",{class:"badge b-stale",style:"margin-left:6px"},"cut to limits") : null),
       ...s.stakes.map(v => h("td",{class:"num"}, money0(v))),
       h("td",{class:"num"}, money(s.totalStaked)),
-      h("td",{class:"num"}, money(s.worstCaseProfit) + " / " + money(s.bestCaseProfit)))))));
+      ...s.states.map(x => h("td",{class:"num"}, money(x.profit))),
+      h("td",{class:"num"}, s.voidAll ? money(s.voidAll.profit) : "—"),
+      h("td",{class:"num"}, h("strong",{}, money(s.worstCaseProfit))),
+      mm ? h("td",{class:"num sev-high"}, money(s.mismatchWorstProfit)) : null)))));
+}
+
+function target500Text(c){
+  const t = c.target500;
+  if (!t) return "A $500 target isn't reachable on this event.";
+  if (!t.reachable) return "$500 isn't reachable within the known wager limits: the most these limits allow is " + money(t.maxProfitWithinLimits) + " (" + t.plan.stakes.map((s,i) => money0(s) + " " + c.legs[i].outcome).join(" + ") + ").";
+  const stakes = t.plan.stakes.map((s,i) => money0(s) + " " + c.legs[i].outcome).join(" + ");
+  if (!t.guaranteed) return "Sized for $500 only if the result is decisive: " + money(t.plan.totalStaked) + " total (" + stakes + "). If it pushes or ties, every wager is refunded and profit is $0 — so $500 is NOT guaranteed.";
+  return "Capital for $500 worst-case profit: " + money(t.plan.totalStaked) + " total (" + stakes + ") → " + money(t.plan.worstCaseProfit) + " in every normal outcome." + (c.capacity === null ? " Wager limits are unknown — books may not accept this size." : c.capacityVerified === null ? " Limits shown are not operator-verified." : "");
 }
 
 function renderCandidates(R){
@@ -354,7 +384,7 @@ function renderCandidates(R){
     list.append(h("details",{class:"cand"},
       h("summary",{},
         h("div",{},
-          h("div",{class:"row"}, status, c.flags.stale ? h("span",{class:"badge b-stale"},"Stale price") : null, c.flags.highRoi ? h("span",{class:"badge b-bad"},"Unusually high") : null),
+          h("div",{class:"row"}, status, c.flags.pushPossible ? h("span",{class:"badge b-stale"},"Push possible — min $0") : null, c.flags.stale ? h("span",{class:"badge b-stale"},"Stale price") : null, c.flags.highRoi ? h("span",{class:"badge b-bad"},"Unusually high") : null),
           h("div",{class:"ev",style:"margin-top:8px"}, c.away + " @ " + c.home),
           h("div",{class:"sub"}, c.sportTitle + " · " + c.marketLabel + " · " + c.lineLabel + " · starts " + pt(c.commence))),
         h("div",{}, h("div",{class:"roi"}, pct(c.roi)), h("div",{class:"sub",style:"text-align:right"},"net ROI"))),
@@ -365,9 +395,8 @@ function renderCandidates(R){
         h("ul",{class:"notes"}, c.settlement.map(n => h("li",{class:"sev-" + n.severity}, "[" + n.severity + "] " + n.text))),
         h("h4",{style:"margin:14px 0 4px"},"Exact stakes by bankroll"),
         scenarioTable(c),
-        h("p",{class:"muted small"}, c.target500
-          ? "To target " + money0(500) + " worst-case profit on this event: " + money0(c.target500.bankroll) + " total (" + c.target500.stakes.map((s,i) => money0(s) + " " + c.legs[i].outcome).join(" + ") + ") → " + money(c.target500.worstCaseProfit) + "." + (c.target500.exceedsVerifiedCapacity ? " This exceeds the verified wager limits." : c.capacity === null ? " Wager limits are unknown — books may not accept this size." : "")
-          : "A $500 target isn't reachable on this event."),
+        h("p",{class:"muted small"}, target500Text(c)),
+        h("p",{class:"muted small"}, "Stakes are rounded down to whole dollars and never exceed the bankroll or any known wager limit. “Event voided” means every wager is refunded. Rule-mismatch rows show what happens if the books apply different rules (for example one voids and the other settles)."),
         h("div",{class:"row"}, h("button",{class:"smallBtn",type:"button",onclick:() => addWatch(c.id)},"Add to watch list"))
       )));
   }
@@ -428,14 +457,22 @@ function renderWatch(data){
       card.append(
         h("p",{class:"small " + (v.isArb ? "" : "muted")}, v.isArb ? "Current best prices form an arbitrage of " + pct(v.roi) + " (mathematical — verify before acting)." : "Not an arbitrage right now: combined implied probability " + (v.impliedSum*100).toFixed(2) + "%."),
         h("div",{class:"tableWrap"}, h("table",{},
-          h("thead",{}, h("tr",{}, h("th",{},"Outcome"), h("th",{},"Current best"), h("th",{},"Book · age"), h("th",{},"Needed for arb (net)"), h("th",{},"Hypothetical 1% / 2% ROI target"))),
+          h("thead",{}, h("tr",{}, h("th",{},"Outcome"), h("th",{},"Current best"), h("th",{},"Book · age"), h("th",{},"Needed for arb (net)"))),
           h("tbody",{}, v.outcomes.map(o => h("tr",{},
-            h("td",{}, o.name + (o.point !== null && o.point !== undefined ? " " + o.point : "")),
+            h("td",{}, o.name + (o.point !== null && o.point !== undefined && v.marketKey !== "h2h" ? " " + (o.point > 0 ? "+" : "") + o.point : "")),
             h("td",{}, am(o.best.american) + " (" + dec(o.best.price ?? o.best.net) + ")"),
             h("td",{}, (o.best.bookTitle || o.best.book) + " · " + ago(o.priceAgeMinutes), o.priceStale ? h("span",{class:"badge b-stale",style:"margin-left:6px"},"stale") : null),
-            h("td",{}, o.threshold ? "better than " + am(o.threshold.american) + " (" + dec(o.threshold.netDecimal) + ")" : "not possible vs. current prices"),
-            h("td",{}, h("span",{class:"badge b-hyp",style:"margin-right:6px"},"Hypothetical"), o.hypotheticalTargets.map(t => t.decimal ? am(t.american) + " (" + dec(t.decimal) + ")" : "n/a").join(" / "))))))),
-        h("p",{class:"muted small"}, "“Needed for arb” is the price this outcome must beat at a different book, using the current best price on the other side(s). Hypothetical targets are calculations only — no bookmaker is quoting them."));
+            h("td",{}, o.threshold ? "better than " + am(o.threshold.american) + " (" + dec(o.threshold.netDecimal) + ")" : "not possible vs. current prices")))))),
+        h("h4",{style:"margin:14px 0 4px"}, h("span",{class:"badge b-hyp",style:"margin-right:8px"},"Hypothetical"), "Target prices — calculations, not quotes"),
+        h("div",{class:"tableWrap"}, h("table",{},
+          h("thead",{}, h("tr",{}, h("th",{},"If this side were priced at"), h("th",{class:"num"},"ROI"), h("th",{},"Stakes for $1,000"), h("th",{class:"num"},"Worst case"), h("th",{},"Capital for $500"))),
+          h("tbody",{}, v.outcomes.flatMap(o => o.hypotheticalTargets.filter(t => t.decimal).map(t => h("tr",{},
+            h("td",{}, o.name + " " + am(t.american) + " (" + dec(t.decimal) + ")"),
+            h("td",{class:"num"}, t.targetRoiPct.toFixed(0) + "%"),
+            h("td",{}, t.example.stakes.map(x => money0(x.stake) + " " + x.outcome + " @ " + x.book).join(" · ")),
+            h("td",{class:"num"}, money(t.example.worstCaseProfit) + (t.example.pushPossible ? " (push = $0)" : "")),
+            h("td",{}, t.capitalFor500 ? money(t.capitalFor500.capital) + " (" + t.capitalFor500.stakes.map((x,i) => money0(x) + " " + v.outcomes[i].name).join(" + ") + ")" + (t.capitalFor500.guaranteed ? "" : " — not guaranteed: a push returns $0") : "n/a"))))))),
+        h("p",{class:"muted small"}, "“Needed for arb” is the price this outcome must beat at a different book, using the current best price on the other side(s). Hypothetical rows assume no commission on that side and unknown wager limits; no bookmaker is quoting those prices."));
     }
     box.append(card);
   }
@@ -454,39 +491,72 @@ function buildCalcRows(){
   for (let i = 0; i < n; i++){
     rows.append(h("div",{class:"metric"},
       h("label",{}, "Outcome " + (i+1) + " odds", h("input",{id:"cO"+i,value:defaults[i],inputmode:"decimal"})),
-      h("label",{style:"margin-top:8px"}, "Commission on winnings (%)", h("input",{id:"cC"+i,type:"number",min:"0",max:"20",step:"0.1",value:"0",inputmode:"decimal"}))));
+      h("label",{style:"margin-top:8px"}, "Commission on winnings (%)", h("input",{id:"cC"+i,type:"number",min:"0",max:"20",step:"0.1",value:"0",inputmode:"decimal"})),
+      h("label",{style:"margin-top:8px"}, "Max wager at this book ($, optional)", h("input",{id:"cL"+i,type:"number",min:"1",step:"1",placeholder:"unknown",inputmode:"decimal"}))));
   }
   rows.querySelectorAll("input").forEach(el => el.addEventListener("input", calc));
   calc();
 }
+// Mirrors netlify/lib/arb.mjs stakePlan: never exceeds the bankroll or any max wager.
+function planStakes(legs, bank, limits){
+  const S = legs.reduce((a,l) => a + 1/l.net, 0);
+  let cap = Infinity;
+  legs.forEach((l,i) => { if (isFinite(limits[i])) cap = Math.min(cap, limits[i] / ((1/l.net)/S)); });
+  const eff = Math.min(bank, Math.floor(cap));
+  const stakes = legs.map((l,i) => Math.min(Math.floor(eff*(1/l.net)/S), isFinite(limits[i]) ? Math.floor(limits[i]) : Infinity));
+  let left = eff - stakes.reduce((a,b) => a+b, 0);
+  while (left >= 1){
+    let k = 0; for (let i = 1; i < legs.length; i++) if (stakes[i]*legs[i].net < stakes[k]*legs[k].net) k = i;
+    if (isFinite(limits[k]) && stakes[k] + 1 > limits[k]) break;
+    stakes[k]++; left--;
+  }
+  const total = stakes.reduce((a,b) => a+b, 0);
+  const profits = stakes.map((s,i) => Math.round((s*legs[i].net - total)*100)/100);
+  return { stakes, total, profits, limitBound: eff < bank };
+}
 function calc(){
-  const n = Number($("cN").value), fmt = $("cFmt").value, bank = Number($("cBank").value), out = $("cOut");
-  const legs = [];
+  const n = Number($("cN").value), fmt = $("cFmt").value, bank = Number($("cBank").value), out = $("cOut"), push = $("cPush").checked;
+  const legs = [], limits = [];
   for (let i = 0; i < n; i++){
-    const d = toDec($("cO"+i).value, fmt), c = Number($("cC"+i).value)/100 || 0;
+    const d = toDec($("cO"+i).value, fmt), c = Number($("cC"+i).value)/100 || 0, lim = Number($("cL"+i).value);
     if (!d) { out.textContent = "Outcome " + (i+1) + ": enter valid " + (fmt === "american" ? "American odds (≥ +100 or ≤ −100)" : "decimal odds (> 1.00)") + "."; return; }
     legs.push({ gross: d, net: 1 + (d-1)*(1-c) });
+    limits.push(lim > 0 ? lim : Infinity);
   }
   if (!(bank > 0)) { out.textContent = "Enter a bankroll above $0."; return; }
   const S = legs.reduce((s,l) => s + 1/l.net, 0), roi = 1/S - 1;
-  const stakes = legs.map(l => Math.round(bank*(1/l.net)/S));
-  const total = stakes.reduce((a,b) => a+b, 0);
-  const profits = stakes.map((s,i) => s*legs[i].net - total);
+  const P = planStakes(legs, bank, limits);
+  const worstDecisive = Math.min(...P.profits);
+  const worst = push ? Math.min(worstDecisive, 0) : worstDecisive;
+  let target = null;
+  if (S < 1){
+    let b = Math.ceil(500/roi);
+    for (let i = 0; i < 400; i++){
+      const t = planStakes(legs, b, limits);
+      if (t.limitBound && Math.min(...t.profits) < 500) { target = { unreachable: true, max: Math.min(...t.profits), plan: t }; break; }
+      if (Math.min(...t.profits) >= 500) { target = { plan: t }; break; }
+      b += Math.max(1, Math.ceil(b*0.0005));
+    }
+  }
   const rest = legs.slice(0,-1).reduce((s,l) => s + 1/l.net, 0);
   const thr = rest < 1 ? 1/(1-rest) : null;
   const lines = [
     "Decimal: " + legs.map(l => l.gross.toFixed(3)).join(" / ") + "  ·  American: " + legs.map(l => am(toAm(l.gross))).join(" / "),
     "Combined implied probability (net of commission): " + (S*100).toFixed(2) + "%",
-    S < 1 ? "Arbitrage: YES — net ROI " + pct(roi) : "Arbitrage: NO — the book is " + ((S-1)*100).toFixed(2) + "% over 100%",
-    "Stakes for " + money0(bank) + ": " + stakes.map((s,i) => "Outcome " + (i+1) + " " + money0(s)).join(", ") + " (total " + money0(total) + ")",
-    "Net profit after rounding: worst " + money(Math.min(...profits)) + ", best " + money(Math.max(...profits)),
-    S < 1 ? "Capital for $500 worst-case profit: about " + money0(Math.ceil(500/roi)) : null,
+    S < 1 ? "Arbitrage: YES — net ROI " + pct(roi) + (push ? " if decisive (a push returns $0)" : "") : "Arbitrage: NO — the book is " + ((S-1)*100).toFixed(2) + "% over 100%",
+    "Stakes for " + money0(bank) + ": " + P.stakes.map((s,i) => "Outcome " + (i+1) + " " + money0(s)).join(", ") + " (total " + money0(P.total) + (P.limitBound ? ", reduced to fit max wagers" : "") + ")",
+    "Profit if outcome wins: " + P.profits.map((p,i) => (i+1) + ": " + money(p)).join(" · ") + (push ? " · Push/tie: $0.00" : "") + " · Event voided: $0.00",
+    "Guaranteed minimum: " + money(worst),
+    target ? (target.unreachable
+      ? "$500 isn't reachable within the max wagers entered (best: " + money(target.max) + ")."
+      : "Capital for $500" + (push ? " if decisive" : " worst-case profit") + ": " + money0(target.plan.total) + " (" + target.plan.stakes.map((s,i) => (i+1) + ": " + money0(s)).join(", ") + ")" + (push ? " — not guaranteed, a push returns $0." : "")) : null,
     thr ? "Outcome " + n + " needs better than " + am(toAm(thr)) + " (" + thr.toFixed(3) + " net) for an arbitrage given the other price(s)." : null,
   ].filter(Boolean);
   out.replaceChildren(...lines.map(t => h("div",{},t)));
 }
 ["cN","cFmt"].forEach(id => $(id).addEventListener("change", buildCalcRows));
 $("cBank").addEventListener("input", calc);
+$("cPush").addEventListener("change", calc);
 buildCalcRows();
 
 boot().catch(() => { show("loading", false); show("signin", true); });
