@@ -82,3 +82,9 @@ Optional (defaults in brackets): `PRO_ALLOW_TRIALING` [true], `PRO_ACCESS_EMAILS
 * Wager limits for regular sportsbooks are not in the feed; they stay "unknown" unless set in `BOOK_TERMS_JSON`.
 * The existing public `get-odds` endpoint still spends credits for anonymous visitors (input is now validated). Consider gating or caching it.
 * Bookmakers restrict accounts that arbitrage consistently; settlement can differ even when prices look aligned.
+
+## Testers (free access) and feedback
+* **Admin page:** `https://bankrolliq.app/admin.html` — unlock with the production `ADMIN_SECRET` (kept only in that browser tab). Add a tester's email and number of days (1–365); remove or extend at any time. No redeploy needed.
+* Testers sign in at `/arbitrage.html` with that email, like members, and see a "Tester access until …" banner.
+* **Feedback form** on the Arbitrage Daily page (members and testers). Each response is stored and emailed to `FEEDBACK_EMAIL` (set this in Netlify; the email uses the existing Resend settings). The admin page also lists all feedback.
+* Admin requests are limited to 30 per 15 minutes per IP.
