@@ -8,11 +8,15 @@ import { init, json } from "../lib/http.mjs";
 export default async (req, context) => {
   init(context);
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
-  const secret = env("ADMIN_SECRET");
-  const given = req.headers.get("x-admin-secret") || "";
-  const ok = secret && secret.length >= 24 && given.length === secret.length &&
-    crypto.timingSafeEqual(Buffer.from(given), Buffer.from(secret));
-  if (!ok) return json({ error: "forbidden" }, 403);
+  // Trim stray spaces/newlines that often sneak in when pasting into dashboards or terminals.
+  const secret = (env("ADMIN_SECRET") || "").trim();
+  const given = (req.headers.get("x-admin-secret") || "").trim();
+  if (!secret) return json({ error: "forbidden", reason: "ADMIN_SECRET is not set for this deploy context (rebuild after adding it)." }, 403);
+  if (secret.length < 24) return json({ error: "forbidden", reason: "ADMIN_SECRET in Netlify is shorter than 24 characters." }, 403);
+  if (!given) return json({ error: "forbidden", reason: "No x-admin-secret header was received." }, 403);
+  const a = crypto.createHash("sha256").update(given).digest();
+  const b = crypto.createHash("sha256").update(secret).digest();
+  if (!crypto.timingSafeEqual(a, b)) return json({ error: "forbidden", reason: "The secret sent does not match ADMIN_SECRET for this deploy context." }, 403);
   try {
     const r = await generateAndStore({ trigger: "manual" });
     const p = publicReport(r);

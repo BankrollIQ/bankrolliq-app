@@ -17,7 +17,7 @@ export function sha256(s) {
 }
 
 function secret() {
-  const s = env("SESSION_SECRET");
+  const s = (env("SESSION_SECRET") || "").trim();
   if (!s || s.length < 32) throw new Error("SESSION_SECRET must be set (32+ random characters)");
   return s;
 }
