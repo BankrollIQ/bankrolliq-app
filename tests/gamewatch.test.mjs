@@ -36,7 +36,8 @@ globalThis.fetch = async (url, init = {}) => {
   if (u.pathname.endsWith("/odds/")) {
     oddsCalls++;
     return ok(liveGames.filter((g) => u.searchParams.get("eventIds").split(",").includes(g.id)).map((g) => ({ ...g, bookmakers: [
-      { key: "fanduel", title: "FanDuel", markets: [{ key: "h2h", last_update: new Date().toISOString(), outcomes: [{ name: "San Francisco 49ers", price: livePrice }, { name: "Underdogs", price: 2.3 }] }] },
+      { key: "fanduel", title: "FanDuel", link: "https://sportsbook.fanduel.com/event/1", markets: [{ key: "h2h", last_update: new Date().toISOString(), outcomes: [{ name: "San Francisco 49ers", price: livePrice, link: "https://sportsbook.fanduel.com/addToBetslip?id=9" }, { name: "Underdogs", price: 2.3 }] }] },
+      { key: "betmgm", title: "BetMGM", link: "https://sports.{state}.betmgm.com/event/1", markets: [{ key: "h2h", last_update: new Date().toISOString(), outcomes: [{ name: "San Francisco 49ers", price: livePrice - 0.05 }, { name: "Underdogs", price: 2.2 }] }] },
       { key: "draftkings", title: "DraftKings", markets: [{ key: "h2h", last_update: iso(-30), outcomes: [{ name: "San Francisco 49ers", price: 5.0 }, { name: "Underdogs", price: 1.2 }] }] }, // stale: ignored
     ] })));
   }
@@ -89,9 +90,11 @@ test("no alert until the 49ers reach even money; then one email, watch stops", a
   s = await runCycle({ origin: O });
   assert.equal(s.alerts, 1);
   assert.equal(emails.length, 1);
-  assert.match(emails[0].subject, /Lock in \$100\.00/);
+  assert.match(emails[0].subject, /^Lock \$100\.00: bet San Francisco 49ers \+100 at FanDuel/);
   assert.match(emails[0].text, /Bet \$200\.00 on San Francisco 49ers/);
   assert.match(emails[0].text, /tie/i); // NFL tie note
+  assert.match(emails[0].html, /href="https:\/\/sportsbook\.fanduel\.com\/addToBetslip\?id=9"/); // bet-slip deep link
+  assert.match(emails[0].html, /Open bet slip at FanDuel/);
   const after = (await (await bets(new Request(O + "/api/bets", { headers: H }), ctx)).json()).bets[0];
   assert.equal(after.status, "alerted");
   assert.equal(after.alerts[0].lockedProfit, 100);
@@ -145,4 +148,32 @@ test("run-now endpoint requires the admin secret", async () => {
 test("bestPrices ignores 3-way markets", () => {
   const p = bestPrices({ bookmakers: [{ key: "x", title: "X", markets: [{ key: "h2h", last_update: new Date().toISOString(), outcomes: [{ name: "A", price: 3 }, { name: "B", price: 3 }, { name: "Draw", price: 3 }] }] }] });
   assert.deepEqual(p, {});
+});
+
+const profile = (await import("../netlify/functions/profile.mjs")).default;
+
+test("My sportsbooks: alerts only on the member's books, and mention the better price elsewhere", async () => {
+  const put = await profile(new Request(O + "/api/profile", { method: "PUT", headers: H, body: JSON.stringify({ books: ["betmgm", "not_a_book"] }) }), ctx);
+  assert.deepEqual((await put.json()).books, ["betmgm"]);
+  await saveBet({ targetProfit: 90 });
+  livePrice = 2.0; // FanDuel 2.00, BetMGM 1.95
+  const s = await runCycle({ origin: O });
+  assert.equal(s.alerts, 1);
+  const e = emails.at(-1);
+  assert.match(e.subject, /at BetMGM/);
+  assert.match(e.text, /Better price outside your sportsbooks: San Francisco 49ers \+100 at FanDuel/);
+  // BetMGM's link has an unfilled {state} placeholder → falls back to its home page
+  assert.match(e.html, /href="https:\/\/www\.betmgm\.com\/?"/);
+  assert.doesNotMatch(e.html, /\{state\}/);
+});
+
+test("no alert when the target is only available at books the member doesn't use", async () => {
+  await profile(new Request(O + "/api/profile", { method: "PUT", headers: H, body: JSON.stringify({ books: ["betmgm"] }) }), ctx);
+  await saveBet({ targetProfit: 100 }); // needs 2.00; BetMGM only 1.95
+  livePrice = 2.0;
+  const s = await runCycle({ origin: O });
+  assert.equal(s.alerts, 0);
+  const v = (await (await bets(new Request(O + "/api/bets", { headers: H }), ctx)).json()).bets[0];
+  assert.equal(v.lock.current.bookTitle, "BetMGM");
+  assert.equal(v.betterElsewhere.bookTitle, "FanDuel");
 });

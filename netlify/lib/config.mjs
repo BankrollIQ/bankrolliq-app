@@ -122,3 +122,35 @@ export function settlementNotes(sportKey, marketKey, outcomeCount) {
 export function scheduleInfo() {
   return { cronUtc: "0 17 * * *", label: "9:00 a.m. PST (fixed UTC−8; 10:00 a.m. when Pacific Daylight Time is in effect)" };
 }
+
+// Bookmakers Game Watch knows about (Odds API keys). `home` is a fallback when the feed has no deep link.
+export const BOOKS = [
+  { key: "draftkings", title: "DraftKings", home: "https://sportsbook.draftkings.com" },
+  { key: "fanduel", title: "FanDuel", home: "https://sportsbook.fanduel.com" },
+  { key: "betmgm", title: "BetMGM", home: "https://www.betmgm.com" },
+  { key: "williamhill_us", title: "Caesars", home: "https://www.caesars.com/sportsbook-and-casino" },
+  { key: "fanatics", title: "Fanatics", home: "https://sportsbook.fanatics.com" },
+  { key: "espnbet", title: "ESPN BET", home: "https://espnbet.com" },
+  { key: "betrivers", title: "BetRivers", home: "https://www.betrivers.com" },
+  { key: "hardrockbet", title: "Hard Rock Bet", home: "https://www.hardrock.bet" },
+  { key: "ballybet", title: "Bally Bet", home: "https://www.ballybet.com" },
+  { key: "betparx", title: "betPARX", home: "https://www.betparx.com" },
+  { key: "fliff", title: "Fliff", home: "https://www.getfliff.com" },
+  { key: "bovada", title: "Bovada", home: "https://www.bovada.lv" },
+  { key: "betonlineag", title: "BetOnline", home: "https://www.betonline.ag" },
+  { key: "mybookieag", title: "MyBookie", home: "https://www.mybookie.ag" },
+  { key: "lowvig", title: "LowVig", home: null },
+  { key: "betus", title: "BetUS", home: null },
+  { key: "betanysports", title: "BetAnySports", home: null },
+  { key: "rebet", title: "Rebet", home: null },
+  { key: "kalshi", title: "Kalshi (exchange)", home: "https://kalshi.com" },
+  { key: "polymarket", title: "Polymarket (exchange)", home: "https://polymarket.com" },
+  { key: "novig", title: "Novig (exchange)", home: null },
+  { key: "prophetx", title: "ProphetX (exchange)", home: null },
+  { key: "betopenly", title: "BetOpenly (exchange)", home: null },
+];
+
+export function bookHome(key) {
+  const base = key.replace(/_(az|fl|oh|nj|pa|mi|il|va|co|in|ny)$/, ""); // e.g. hardrockbet_az → hardrockbet
+  return BOOKS.find((b) => b.key === base)?.home || null;
+}

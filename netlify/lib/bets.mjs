@@ -131,3 +131,16 @@ export async function getQuotes() {
 export async function setQuotes(q) {
   await setJSON("gamewatch", "quotes", q);
 }
+
+// Member preferences for Game Watch: the sportsbooks they can bet at.
+export async function getProfile(email) {
+  return (await getJSON("bets", `profile/${userKey(email)}`)) || { books: [] };
+}
+
+export async function saveProfile(email, books, allowed) {
+  const set = new Set(allowed);
+  const clean = [...new Set((Array.isArray(books) ? books : []).map(String))].filter((b) => set.has(b)).slice(0, 30);
+  const p = { books: clean, updated: new Date().toISOString() };
+  await setJSON("bets", `profile/${userKey(email)}`, p);
+  return p;
+}

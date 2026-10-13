@@ -3,17 +3,19 @@
 //   POST {sportKey,eventId,side,stake,odds,oddsFormat,book,targetProfit,watch} → save a bet
 //   PATCH {id, watch}           → turn Game Watch on/off for a bet
 //   DELETE ?id=                 → remove
-import { addBet, getBets, getQuotes, removeBet, setWatch } from "../lib/bets.mjs";
-import { eventsFor } from "../lib/gamewatch.mjs";
+import { addBet, getBets, getProfile, getQuotes, removeBet, setWatch } from "../lib/bets.mjs";
+import { eventsFor, pickQuote } from "../lib/gamewatch.mjs";
 import { evaluateBet, tiePossible } from "../lib/lockin.mjs";
 import { init, json, requirePro, sameOrigin } from "../lib/http.mjs";
 
 async function view(email) {
-  const [bets, quotes] = await Promise.all([getBets(email), getQuotes()]);
+  const [bets, quotes, profile] = await Promise.all([getBets(email), getQuotes(), getProfile(email)]);
   return bets.map((b) => {
     const q = quotes[b.eventId];
-    const best = q?.outcomes?.[b.other] || null;
-    return { ...b, tiePossible: tiePossible(b.sportKey), quoteAt: q?.at || null, live: q?.live || false, lock: evaluateBet(b, best) };
+    const list = q?.outcomes?.[b.other];
+    const { mine, overall } = pickQuote(Array.isArray(list) ? list : list ? [list] : [], profile.books);
+    return { ...b, tiePossible: tiePossible(b.sportKey), quoteAt: q?.at || null, live: q?.live || false, lock: evaluateBet(b, mine),
+      betterElsewhere: overall && mine && overall.book !== mine.book && overall.net > mine.net ? { bookTitle: overall.bookTitle, price: overall.price, link: overall.link } : null };
   });
 }
 

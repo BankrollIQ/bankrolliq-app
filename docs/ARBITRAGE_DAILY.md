@@ -97,3 +97,5 @@ Optional (defaults in brackets): `PRO_ALLOW_TRIALING` [true], `PRO_ACCESS_EMAILS
 * Approximate Odds API cost: 3 credits per minute per sport with live watched games → ~630 credits for a 3.5-hour game (shared by everyone watching that sport).
 * Approximate Netlify cost: the every-minute check runs ~43,000 times a month; with no live watches it only reads one small record (roughly 10–30 credits/month).
 * Deploy Previews don't run schedules: `POST /api/gamewatch/run` with `x-admin-secret` runs one cycle on demand.
+* **Links in alerts:** the feed is asked for bookmaker deep links (`includeLinks=true`, no extra credits). Each alert's main button opens the bet slip when the book provides one, otherwise the event page, otherwise the book's home page (`BOOKS` in `netlify/lib/config.mjs`). Links with unfilled placeholders such as `{state}` fall back to the home page.
+* **My sportsbooks:** members tick the books/exchanges they use (`/api/profile`). Game Watch then alerts only on those books and mentions a better price elsewhere, with its own link.

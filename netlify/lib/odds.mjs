@@ -135,5 +135,6 @@ export async function fetchEventsOdds(sportKey, eventIds, { markets = "h2h", reg
   url.searchParams.set("oddsFormat", "decimal");
   url.searchParams.set("dateFormat", "iso");
   url.searchParams.set("eventIds", eventIds.join(","));
+  url.searchParams.set("includeLinks", "true");
   return getJson(url);
 }

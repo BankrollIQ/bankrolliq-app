@@ -70,6 +70,8 @@ ul.notes{margin:8px 0;padding-left:18px;color:var(--muted);line-height:1.6;font-
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .hidden{display:none!important}
 .calcGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.checkGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}.checkGrid label{display:flex;gap:8px;align-items:center;color:var(--text);font-size:14px}.checkGrid input{width:auto;margin:0}
+@media(max-width:520px){.checkGrid{grid-template-columns:1fr 1fr}}
 .listRow{display:flex;justify-content:space-between;gap:14px;padding:12px 0;border-bottom:1px solid var(--line)}
 .listRow:last-of-type{border-bottom:none}
 .listMain{min-width:0;flex:1}
@@ -141,6 +143,13 @@ footer{display:flex;justify-content:space-between;gap:16px;color:var(--muted);bo
       <p>Save a bet you already placed. We show the price the other side needs for you to lock in a profit whichever team wins, and — with Game Watch on — check live prices every minute during the game and email you when your target is available. Two-way moneylines only.</p>
     </div>
     <div class="card">
+      <details id="booksBox" style="margin-bottom:16px">
+        <summary style="cursor:pointer;font-weight:800">My sportsbooks <span id="booksCount" class="muted small"></span></summary>
+        <p class="muted small">Pick the books and exchanges you have accounts with. Game Watch only alerts on prices you can actually bet, and mentions when a better price exists elsewhere. Leave all unticked to use every book.</p>
+        <div id="booksList" class="checkGrid"></div>
+        <button class="smallBtn" id="booksSave" type="button" style="margin-top:10px">Save my sportsbooks</button>
+        <span id="booksMsg" class="muted small" style="margin-left:8px"></span>
+      </details>
       <form id="betForm" class="grid" style="gap:12px">
         <div class="calcGrid">
           <label>Sport<select id="bSport"><option value="">Loading…</option></select></label>
@@ -530,7 +539,21 @@ function oddsToDec(v, fmt){ const x = Number(String(v||"").trim().replace(/^\+/,
 function decToAm(d){ if (!(d > 1)) return null; return d >= 2 ? Math.round((d-1)*100) : Math.round(-100/(d-1)); }
 function needed(stake, dec, target){ const P = stake*dec, room = P - stake - target; return room > 0 ? P/room : null; }
 
+async function loadBooks(){
+  const r = await api("/api/profile"); if (!r.ok) return;
+  const box = $("booksList"); box.replaceChildren();
+  const mine = new Set(r.data.books);
+  for (const b of r.data.catalog) box.append(h("label",{}, h("input",{type:"checkbox", value:b.key, checked: mine.has(b.key) || null}), b.title));
+  $("booksCount").textContent = mine.size ? "(" + mine.size + " selected)" : "(all books)";
+}
+$("booksSave").addEventListener("click", async () => {
+  const books = [...$("booksList").querySelectorAll("input:checked")].map(x => x.value);
+  const r = await api("/api/profile", { method: "PUT", body: JSON.stringify({ books }) });
+  $("booksMsg").textContent = r.ok ? "Saved." : "Couldn't save.";
+  if (r.ok){ $("booksCount").textContent = r.data.books.length ? "(" + r.data.books.length + " selected)" : "(all books)"; loadBets(); }
+});
 async function initBets(){
+  loadBooks();
   const r = await api("/api/gamewatch/games");
   const sel = $("bSport"); sel.replaceChildren(h("option",{value:""}, r.ok ? "Choose a sport" : "Couldn't load sports"));
   if (r.ok) for (const sp of r.data.sports) sel.append(h("option",{value:sp.key}, sp.title));
@@ -587,7 +610,8 @@ function renderBets(list){
         h("div",{class:"ev"}, b.away + " @ " + b.home),
         h("div",{class:"sub"}, b.sportTitle + " · " + pt(b.commence) + " · " + money(b.stake) + " on " + b.side + " at " + b.oddsEntered + (b.book ? " (" + b.book + ")" : "")),
         h("div",{class:"sub"}, "Break even needs " + b.other + " " + am(L.breakEvenAmerican) + " or better" + (L.targetProfit > 0 && L.neededAmerican !== null ? " · " + money(L.targetProfit) + " lock needs " + am(L.neededAmerican) : "")),
-        c ? h("div",{class:"sub"}, "Best now (" + ago((Date.now() - Date.parse(b.quoteAt))/60000) + "): " + b.other + " " + am(c.american) + " at " + c.bookTitle + " → hedge " + money(c.hedgeStake) + ", locked " + money(c.lockedProfit) + (c.feeStatus === "unknown" ? " before exchange fees" : "")) : h("div",{class:"sub"}, b.watch ? "Live prices appear here once Game Watch starts checking (from 1 hour before the game)." : "Turn on Game Watch to track live prices."),
+        c ? h("div",{class:"sub"}, "Best now (" + ago((Date.now() - Date.parse(b.quoteAt))/60000) + "): " + b.other + " " + am(c.american) + " at ", c.link ? h("a",{href:c.link, target:"_blank", rel:"noopener", style:"color:var(--accent);font-weight:800"}, c.bookTitle + " ↗") : c.bookTitle, " → hedge " + money(c.hedgeStake) + ", locked " + money(c.lockedProfit) + (c.feeStatus === "unknown" ? " before exchange fees" : "")) : h("div",{class:"sub"}, b.watch ? "Live prices appear here once Game Watch starts checking (from 1 hour before the game)." : "Turn on Game Watch to track live prices."),
+        b.betterElsewhere ? h("div",{class:"sub"}, "Better outside your books: " + am(decToAm(b.betterElsewhere.price)) + " at " + b.betterElsewhere.bookTitle) : null,
         b.tiePossible ? h("div",{class:"sub"},"If it ends in a tie/draw, books usually refund both bets ($0).") : null,
         (b.alerts || []).length ? h("div",{class:"sub"}, "Last alert " + pt(b.alerts[0].at) + ": lock " + money(b.alerts[0].lockedProfit) + " via " + b.alerts[0].book + " " + am(b.alerts[0].american)) : null),
       h("div",{class:"listSide"},
