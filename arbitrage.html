@@ -593,10 +593,10 @@ function calc(){
     S < 1 ? "Arbitrage: YES — net ROI " + pct(roi) + (push ? " if decisive (a push returns $0)" : "") : "Arbitrage: NO — the book is " + ((S-1)*100).toFixed(2) + "% over 100%",
     "Stakes for " + money0(bank) + ": " + P.stakes.map((s,i) => "Outcome " + (i+1) + " " + money0(s)).join(", ") + " (total " + money0(P.total) + (P.limitBound ? ", reduced to fit max wagers" : "") + ")",
     "Profit if outcome wins: " + P.profits.map((p,i) => (i+1) + ": " + money(p)).join(" · ") + (push ? " · Push/tie: $0.00" : "") + " · Event voided: $0.00",
-    "Guaranteed minimum: " + money(worst),
+    "Minimum modeled profit if wagers settle as shown: " + money(worst),
     target ? (target.unreachable
       ? "$500 isn't reachable within the max wagers entered (best: " + money(target.max) + ")."
-      : "Capital for $500" + (push ? " if decisive" : " worst-case profit") + ": " + money0(target.plan.total) + " (" + target.plan.stakes.map((s,i) => (i+1) + ": " + money0(s)).join(", ") + ")" + (push ? " — not guaranteed, a push returns $0." : "")) : null,
+      : "Estimated capital for $500 under the modeled outcomes" + (push ? " (if decisive)" : "") + ": " + money0(target.plan.total) + " (" + target.plan.stakes.map((s,i) => (i+1) + ": " + money0(s)).join(", ") + ")" + (push ? " — not guaranteed, a push returns $0." : "")) : null,
     thr ? "Outcome " + n + " needs better than " + am(toAm(thr)) + " (" + thr.toFixed(3) + " net) for an arbitrage given the other price(s)." : null,
   ].filter(Boolean);
   out.replaceChildren(...lines.map(t => h("div",{},t)));
